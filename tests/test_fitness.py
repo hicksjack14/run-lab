@@ -84,3 +84,40 @@ def test_adherence_marks_done_partial_missed_and_upcoming(conn):
     assert [o["status"] for o in out] == ["done", "partial", "missed", "upcoming"]
     assert out[0]["actual_mi"] == pytest.approx(5.0)
     assert out[0]["run_id"] == "1"
+
+
+def test_whole_runs_in_moving_time_raise_a_low_best_effort_estimate(conn):
+    # Strava's 5K "best effort" inside this run is inflated by stops (36:33), but the run itself was 10.5 km in 61:31 of moving time
+    add_run(conn, "1", "2026-09-20", 6.52, 3691, efforts=[("Fastest5k", 2193)])
+    snap = fitness.snapshot(conn, date(2026, 10, 1))
+    assert snap["vdot"] > 31 and snap["vdot_basis"]["type"] == "WholeRun" and snap["vdot_is_estimate"] is True
+
+
+def test_race_result_beats_data_estimate_but_not_manual_override(conn):
+    add_run(conn, "1", "2026-09-20", 6.52, 3691)
+    fitness.set_setting(conn, "race_result", {"distance_m": 5000, "seconds": 27 * 60, "label": "5K"})
+    snap = fitness.snapshot(conn, date(2026, 10, 1))
+    assert snap["vdot_source"] == "race" and snap["vdot_is_estimate"] is False
+    assert snap["vdot"] == pytest.approx(zones_vdot(5000, 27 * 60))
+    fitness.set_setting(conn, "vdot_override", 50)
+    assert fitness.snapshot(conn, date(2026, 10, 1))["vdot_source"] == "override"
+
+
+def zones_vdot(d, t):
+    from analysis import zones
+    return zones.vdot(d, t)
+
+
+def test_everyday_pace_estimate_helps_someone_who_never_races(conn):
+    # a runner who jogs ~10:13/mi and has never done a hard effort: best efforts alone would read far too low
+    for i, day in enumerate(["2026-09-10", "2026-09-14", "2026-09-18", "2026-09-22", "2026-09-26"]):
+        add_run(conn, str(i + 1), day, 4.3, int(4.3 * 613), efforts=[("Fastest5k", 2193)])
+    snap = fitness.snapshot(conn, date(2026, 10, 1))
+    assert snap["vdot_basis"]["type"] == "EverydayPace" and 35 < snap["vdot"] < 40
+    assert snap["paces"]["easy"]["fast"] < 613 + 40         # his everyday pace now sits inside (or near) the easy range
+
+
+def test_everyday_pace_needs_three_runs(conn):
+    add_run(conn, "1", "2026-09-26", 4.3, int(4.3 * 613))
+    add_run(conn, "2", "2026-09-28", 4.3, int(4.3 * 613))
+    assert fitness.snapshot(conn, date(2026, 10, 1))["vdot_basis"]["type"] != "EverydayPace"

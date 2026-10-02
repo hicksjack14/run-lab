@@ -151,3 +151,11 @@ def test_analytics_runs_carry_explorer_fields(client):
 def test_static_files_are_always_revalidated(client):
     assert client.get("/js/main.js").headers["Cache-Control"] == "no-cache"
     assert "Cache-Control" not in client.get("/api/meta").headers or client.get("/api/meta").headers["Cache-Control"] != "no-cache"
+
+
+def test_race_result_sets_fitness_and_is_validated(client):
+    f = client.post("/api/settings", json={"race_result": {"distance_m": 5000, "seconds": 1620, "label": "5K"}}).get_json()
+    assert f["vdot_source"] == "race" and f["vdot"] > 30
+    assert client.post("/api/settings", json={"race_result": {"distance_m": 5000, "seconds": 300}}).status_code == 400   # a 5-minute 5K
+    assert client.post("/api/settings", json={"race_result": {"distance_m": "far", "seconds": 1620}}).status_code == 400
+    assert client.post("/api/settings", json={"race_result": None}).get_json()["vdot_source"] == "data"

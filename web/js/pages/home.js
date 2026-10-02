@@ -78,7 +78,8 @@ function pacesBlock(f) {
       row("Easy", f.paces.easy.text, "pace-c"), row("Marathon", f.paces.marathon.text), row("Tempo", f.paces.threshold.text), row("Intervals", f.paces.interval.text))),
     h("h2", { class: "label", style: { marginTop: "14px" } }, "Race predictions"),
     h("table", { class: "pace-table" }, h("tbody", {}, ["5K", "10K", "Half marathon", "Marathon"].filter((k) => f.prediction_text[k]).map((k) => row(k, f.prediction_text[k])))),
-    h("p", { class: "hint" }, `Fitness score ${f.vdot.toFixed(1)}. Updates as you run faster.`));
+    h("p", { class: "hint" }, `Fitness score ${f.vdot.toFixed(1)}. `, f.vdot_is_estimate ? "An estimate from training runs, which reads low until you add a race result. " : "",
+      f.vdot_is_estimate ? h("a", { class: "link", href: "#/plan" }, "Add one") : null));
 }
 
 function coachBlock(coach) {

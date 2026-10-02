@@ -128,6 +128,17 @@ def create_app(db_path=None, today=None):
     @app.post("/api/settings")
     def post_settings():
         body = request.get_json(force=True) or {}
+        if "race_result" in body:
+            rr = body["race_result"]
+            if rr is not None:
+                try:
+                    dist, secs = float(rr["distance_m"]), float(rr["seconds"])
+                except (KeyError, TypeError, ValueError):
+                    return jsonify({"error": "A race result needs a distance and a time."}), 400
+                if not (1000 <= dist <= 100_000 and 150 <= secs <= 86_400 and 15 <= zones.vdot(dist, secs) <= 85):
+                    return jsonify({"error": "That distance and time doesn't look right. Check the time (e.g. 27:30 for a 5K)."}), 400
+                rr = {"distance_m": dist, "seconds": secs, "label": str(rr.get("label") or f"{dist / 1000:.1f} km")[:40]}
+            fitness.set_setting(conn(), "race_result", rr)
         for key in ("max_hr", "vdot_override"):
             if key in body:
                 v = body[key]
@@ -261,7 +272,7 @@ def create_app(db_path=None, today=None):
         return jsonify({
             "recent": [{**dict(r), "has_gps": bool(r["has_gps"]), "glyph": route_glyph(c, r["id"])} for r in recent],
             "week": {"miles": weeks[-1]["miles"], "last_miles": weeks[-2]["miles"], "runs": runs_this_week, "start": monday.isoformat()},
-            "plan": plan, "fitness": {k: snap[k] for k in ("vdot", "paces", "predictions", "prediction_text", "max_hr", "needs")},
+            "plan": plan, "fitness": {k: snap[k] for k in ("vdot", "vdot_source", "vdot_is_estimate", "paces", "predictions", "prediction_text", "max_hr", "needs")},
             "coach": coach, "today": today.isoformat(),
         })
 

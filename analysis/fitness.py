@@ -1,5 +1,6 @@
 """Database-aware fitness helpers: settings, current fitness snapshot, weekly mileage, plan adherence."""
 import json
+import statistics
 from collections import defaultdict
 from datetime import date, timedelta
 
@@ -42,11 +43,26 @@ def snapshot(conn, today=None):
     efforts = [dict(r) for r in conn.execute(
         "SELECT be.type AS type, be.seconds AS seconds, substr(r.start_local, 1, 10) AS date "
         "FROM best_efforts be JOIN runs r ON r.strava_id = be.strava_id")]
+    # Strava's "best efforts" use clock time (stops included), so they read low on stop-and-go runs. Whole runs, measured in
+    # moving time, are a second source of evidence. Both are lower bounds: easy training never shows full fitness.
+    for r in conn.execute("SELECT distance_m, moving_s, substr(start_local, 1, 10) AS date FROM runs WHERE moving_s >= 1200 AND distance_m >= 3000"):
+        efforts.append({"type": "WholeRun", "seconds": r["moving_s"], "date": r["date"], "distance_m": r["distance_m"]})
     est = zones.estimate_vdot(efforts, today)
+    recent = [r["moving_s"] / (r["distance_m"] / MI) for r in conn.execute(
+        "SELECT distance_m, moving_s FROM runs WHERE moving_s >= 1200 AND distance_m > 0 AND substr(start_local, 1, 10) >= ?",
+        ((today - timedelta(days=56)).isoformat(),))]
+    if len(recent) >= 3:
+        typical = statistics.median(recent)
+        easy_based = zones.vdot_from_everyday_pace(typical)
+        if not est or easy_based > est["vdot"]:
+            est = {"vdot": easy_based, "basis": {"type": "EverydayPace", "pace": typical, "runs": len(recent), "date": today.isoformat()}}
     needs = []
 
+    race = settings.get("race_result")
     if settings.get("vdot_override"):
         vdot, vdot_source, basis = float(settings["vdot_override"]), "override", None
+    elif race:
+        vdot, vdot_source, basis = zones.vdot(race["distance_m"], race["seconds"]), "race", race
     elif est:
         vdot, vdot_source, basis = est["vdot"], "data", est["basis"]
     else:
@@ -79,6 +95,7 @@ def snapshot(conn, today=None):
     last4 = conn.execute("SELECT COALESCE(SUM(distance_m), 0) FROM runs WHERE substr(start_local, 1, 10) >= ?", (start,)).fetchone()[0]
     return {
         "vdot": vdot, "vdot_source": vdot_source, "vdot_basis": basis,
+        "vdot_is_estimate": vdot_source == "data",
         "max_hr": max_hr, "max_hr_source": max_hr_source,
         "hr_zones": zones.hr_zones(max_hr) if max_hr else None,
         "paces": paces, "predictions": predictions,

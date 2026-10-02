@@ -83,20 +83,52 @@ function goalForm(current, fit, ctx, onCreated, onCancel) {
 }
 
 // =============================================================== numbers (fitness + overrides)
+const RACE_DISTANCES = { "1 mile": 1609.344, "5K": 5000, "10K": 10000, "Half marathon": 21097.5 };
+
+function sourceNote(fit) {
+  const b = fit.vdot_basis;
+  if (fit.vdot_source === "override") return "Set by you.";
+  if (fit.vdot_source === "race") return `From your ${b.label} result of ${dur(b.seconds)}.`;
+  if (b && b.type === "EverydayPace") return `Estimated from your everyday pace (${pace(b.pace)}/mi across ${b.runs} recent runs), treated as comfortable running.`;
+  if (b && b.type === "WholeRun") return `Estimated from a whole run on ${fmtDay(b.date, { month: "short", day: "numeric" })}.`;
+  return b ? `From your ${b.type.replace("Fastest", "")} effort on ${fmtDay(b.date, { month: "short", day: "numeric" })}.` : "";
+}
+
 function numbersPanel(fit) {
   const body = h("section", { class: "panel numbers" }, h("div", { class: "panel-head" }, h("h2", {}, "Your numbers")));
   if (!fit.vdot) {
     body.append(h("p", { class: "muted" }, fit.needs[0] || "Not enough data yet."),
-      h("p", { class: "hint" }, "You can still set a fitness score by hand below to get paces."));
+      h("p", { class: "hint" }, "Add a recent race result below, or set a fitness score by hand, to get paces."));
   } else {
-    const basis = fit.vdot_basis;
     body.append(h("p", { class: "big mono" }, fit.vdot.toFixed(1), h("small", {}, "fitness score")),
-      h("p", { class: "hint" }, fit.vdot_source === "override" ? "Set by you." : basis ? `From your ${basis.type.replace("Fastest", "")} effort on ${fmtDay(basis.date, { month: "short", day: "numeric" })}.` : ""),
+      h("p", { class: "hint" }, sourceNote(fit)),
+      fit.vdot_is_estimate ? h("p", { class: "estimate-note" }, "This is an estimate from training runs, and those usually read low. A recent race or hard effort makes your paces much sharper: add one below.") : null,
       h("table", { class: "pace-table" }, h("tbody", {},
         ...[["Easy", fit.paces.easy.text, "pace-c"], ["Marathon", fit.paces.marathon.text], ["Tempo", fit.paces.threshold.text], ["Intervals", fit.paces.interval.text]]
           .map(([k, v, c]) => h("tr", {}, h("th", { scope: "row" }, `${k} (/mi)`), h("td", { class: `mono ${c || ""}` }, v))))));
   }
   if (fit.max_hr) body.append(h("p", { class: "muted" }, `Max heart rate ${fit.max_hr} bpm${fit.max_hr_source === "override" ? " (set by you)" : " (from your runs)"}.`));
+
+  const saved = fit.settings.race_result;
+  const distSel = h("select", { class: "input", id: "rr-dist", "aria-label": "Race distance" }, Object.keys(RACE_DISTANCES).map((k) => h("option", { value: k, selected: k === "5K" ? true : null }, k)));
+  const timeIn = h("input", { class: "input mono", type: "text", id: "rr-time", inputmode: "numeric", autocomplete: "off", placeholder: "e.g. 27:30", "aria-label": "Race time" });
+  const rrErr = h("p", { class: "error-text", role: "alert" });
+  const saveRace = async (e) => {
+    e.preventDefault(); rrErr.textContent = "";
+    const secs = parseDuration(timeIn.value);
+    if (!secs) { rrErr.textContent = "Enter the time like 27:30 or 1:55:00."; return; }
+    try {
+      await api.post("/api/settings", { race_result: { distance_m: RACE_DISTANCES[distSel.value], seconds: secs, label: distSel.value } });
+      toast("Race result saved. Paces updated.");
+      location.reload();
+    } catch (ex) { rrErr.textContent = ex.message; }
+  };
+  body.append(h("details", { class: "overrides", open: fit.vdot_is_estimate || !fit.vdot ? true : null }, h("summary", {}, saved ? "Race result (saved)" : "Add a race result"),
+    h("form", { onsubmit: saveRace },
+      h("p", { class: "hint" }, "A recent race, time trial, or all-out effort (within the last few months) is the best way to set your paces."),
+      h("div", { class: "form-row" }, h("div", { class: "field" }, h("label", { class: "label", for: "rr-dist" }, "Distance"), distSel), h("div", { class: "field" }, h("label", { class: "label", for: "rr-time" }, "Time"), timeIn)),
+      rrErr, h("div", { class: "form-actions" }, h("button", { class: "btn btn-quiet", type: "submit" }, "Use this result"),
+        saved ? h("button", { class: "btn btn-quiet", type: "button", onclick: async () => { await api.post("/api/settings", { race_result: null }); location.reload(); } }, "Remove it") : null))));
 
   const vdot = h("input", { class: "input mono", type: "number", step: "0.1", min: "15", max: "85", id: "ov-vdot", value: fit.settings.vdot_override || "", placeholder: "auto" });
   const maxhr = h("input", { class: "input mono", type: "number", step: "1", min: "100", max: "240", id: "ov-maxhr", value: fit.settings.max_hr || "", placeholder: "auto" });

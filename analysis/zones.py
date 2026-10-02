@@ -29,6 +29,12 @@ def _fraction_of_max(t_min):  # fraction of VO2max sustainable for t minutes
     return 0.8 + 0.1894393 * math.exp(-0.012778 * t_min) + 0.2989558 * math.exp(-0.1932605 * t_min)
 
 
+def vdot_from_everyday_pace(seconds_per_mile, fraction=0.72):
+    """Fitness implied by a comfortable training pace, treating it as `fraction` of VO2 max (the quick end of easy running)."""
+    v = MI / seconds_per_mile * 60  # metres per minute
+    return _vo2_at_velocity(v) / fraction
+
+
 def vdot(distance_m, time_s):
     t = time_s / 60
     return _vo2_at_velocity(distance_m / t) / _fraction_of_max(t)
@@ -105,7 +111,7 @@ def estimate_vdot(efforts, today=None, window_days=120):
     today = date.fromisoformat(today) if isinstance(today, str) else (today or date.today())
     best = None
     for e in efforts:
-        dist = EFFORT_DISTANCES.get(e["type"])
+        dist = e.get("distance_m") or EFFORT_DISTANCES.get(e["type"])
         if not dist or dist < 1000:
             continue
         age = (today - date.fromisoformat(e["date"][:10])).days
