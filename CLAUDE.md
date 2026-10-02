@@ -9,8 +9,13 @@ Jack's personal running app: Strava/Garmin runs + Spotify songs, shown on charts
 cd ~/run-lab
 .venv/bin/python server.py            # http://127.0.0.1:5057
 .venv/bin/python -m pytest -q         # tests
-.venv/bin/python -m ingest.strava_import   # load data/strava-dumps/*.json into SQLite
+.venv/bin/python -m ingest.strava_api auth    # one-time Strava login (needs .env, see below)
+.venv/bin/python -m ingest.strava_api sync    # pull all new runs; re-run any time (--limit N to test)
+.venv/bin/python -m ingest.strava_import      # reload data/strava-dumps/*.json into SQLite
 ```
+
+## Strava sync (direct API, preferred)
+`ingest/strava_api.py` talks to Strava's API itself; no Claude needed. Setup: create a free app at https://www.strava.com/settings/api (Authorization Callback Domain: `localhost`), copy `.env.example` to `.env` and fill in Client ID/Secret, then run `auth` once. Token is saved to `data/strava_token.json` (chmod 600, gitignored). Limits: ~100 requests/15 min, 1000/day; `sync` stops cleanly on 429 and is resumable (skips runs already in the DB). Never print or commit `.env` or the token.
 Restart the server after editing Python modules (no auto-reload of imports).
 
 ## Layout
@@ -22,8 +27,8 @@ Restart the server after editing Python modules (no auto-reload of imports).
 - `web/` — static dashboard (Leaflet map replay, charts). No build step.
 - `data/` — gitignored: `runlab.db`, `strava-dumps/`, `spotify-export/`.
 
-## How Strava data gets in
-Strava comes through the **Strava MCP connector** (tools `list_activities`, `get_activity_streams`, `get_activity_performance`). The app cannot call it; Claude does. Flow: Claude pulls an activity + streams + performance, writes `data/strava-dumps/<activity_id>.json`, then runs the importer.
+## Fallback: Strava via the MCP connector
+If the API isn't set up, Strava can also come through the **Strava MCP connector** (tools `list_activities`, `get_activity_streams`, `get_activity_performance`). The app cannot call it; Claude does. Flow: Claude pulls an activity + streams + performance, writes `data/strava-dumps/<activity_id>.json`, then runs the importer.
 
 Dump format (one file per run):
 ```json
@@ -32,6 +37,8 @@ Dump format (one file per run):
  "performance": {<get_activity_performance result>}}
 ```
 Pull streams with `resolution: 1000` (medium): full resolution costs ~40k tokens per run in Claude's context. For big backfills, direct Strava API sync is cheaper (see spec open questions).
+
+After writing a dump, ALWAYS check every stream array has the same length (a mis-copied `moving` array once shifted the pause markers). Map tiles are OSM with a CSS invert filter (CARTO dark needs an API key).
 
 ## Data gotchas
 - `start_local` has no timezone. Default `America/New_York`; per-run override column `tz`. Match Spotify on UTC only.

@@ -40,7 +40,7 @@ def import_dump(conn, dump):
     sid = str(act["id"])
 
     existing = conn.execute("SELECT tz FROM runs WHERE strava_id = ?", (sid,)).fetchone()
-    tz = existing["tz"] if existing else DEFAULT_TZ
+    tz = existing["tz"] if existing else act.get("timezone") or DEFAULT_TZ
 
     location = streams.get("location")
     avg_cad = summary.get("avg_cadence")

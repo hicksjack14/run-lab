@@ -4,6 +4,9 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 
+# Strava API credentials
+.env
+
 # Personal data: GPS routes, HR, listening history. Never commit.
 data/*
 !data/strava-dumps/
