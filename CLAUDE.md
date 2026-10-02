@@ -7,11 +7,13 @@ Jack's personal running app: Strava/Garmin runs + Spotify songs, shown on charts
 ## Run it
 ```bash
 cd ~/run-lab
-.venv/bin/python server.py            # http://127.0.0.1:5057
+.venv/bin/python server.py            # http://127.0.0.1:5057 (real data)
+.venv/bin/python server.py --demo     # fake demo data (make it first: python -m tools.make_demo_data)
 .venv/bin/python -m pytest -q         # tests
 .venv/bin/python -m ingest.strava_api auth    # one-time Strava login (needs .env, see below)
 .venv/bin/python -m ingest.strava_api sync    # pull all new runs; re-run any time (--limit N to test)
 .venv/bin/python -m ingest.strava_import      # reload data/strava-dumps/*.json into SQLite
+.venv/bin/python -m ingest.spotify_import     # import the Spotify export dropped in data/spotify-export/
 ```
 
 ## Strava sync (direct API, preferred)
@@ -19,13 +21,17 @@ cd ~/run-lab
 Restart the server after editing Python modules (no auto-reload of imports).
 
 ## Layout
-- `db.py` — SQLite schema + `connect()`. DB file: `data/runlab.db`.
-- `ingest/strava_import.py` — idempotent loader for dump JSON (format below).
-- `ingest/spotify_import.py` — (todo) Spotify Extended Streaming History -> `plays`.
-- `analysis/` — `music_match.py`, `zones.py`, `plans.py` (todo; pure functions, unit-tested).
-- `server.py` — Flask on `127.0.0.1` only. JSON API + serves `web/`.
-- `web/` — static dashboard (Leaflet map replay, charts). No build step.
-- `data/` — gitignored: `runlab.db`, `strava-dumps/`, `spotify-export/`.
+- `db.py`: SQLite schema + `connect()`. Real DB `data/runlab.db`; demo DB `data/demo.db` (`RUNLAB_DB=demo` or `--demo`).
+- `ingest/`: `strava_api.py` (OAuth + resumable sync), `strava_import.py` (dump loader), `spotify_import.py` (export -> `plays`).
+- `analysis/` (pure, unit-tested): `zones.py` (VDOT, paces, HR zones), `fitness.py` (current numbers + overrides + plan adherence), `plans.py` (plan generator), `ics.py` (Google Calendar export), `insights.py` (findings + analytics series), `places.py` (home base, new ground), `music_match.py` (songs on runs + music findings).
+- `server.py`: Flask on `127.0.0.1` only. JSON API + serves `web/`.
+- `web/`: no build step. `js/main.js` router; `js/pages/` home, runs, run, planner, analytics (+ `-story`, `-explore`, `-places`); `css/` base, pages, analytics.
+- `tools/make_demo_data.py`: generates ~80 fake runs (with planted patterns the tests look for).
+- `PRODUCT.md` / `DESIGN.md`: design context (read before any UI work).
+- `data/`: gitignored: databases, `strava-dumps/`, `spotify-export/`, `strava_token.json`.
+
+## Fitness numbers
+Paces come from a fitness score (VDOT). Sources, in order: manual override, a race result Jack enters, then an estimate from his data (best efforts, whole runs in moving time, everyday pace). The data estimate reads low for someone who mostly runs easy, so the UI labels it an estimate and offers "Add a race result".
 
 ## Fallback: Strava via the MCP connector
 If the API isn't set up, Strava can also come through the **Strava MCP connector** (tools `list_activities`, `get_activity_streams`, `get_activity_performance`). The app cannot call it; Claude does. Flow: Claude pulls an activity + streams + performance, writes `data/strava-dumps/<activity_id>.json`, then runs the importer.
