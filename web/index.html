@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Familjen+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="rail" aria-label="Runs">
+    <div class="brand"><span class="brand-mark" aria-hidden="true"></span>Run Lab</div>
+    <nav id="run-list" class="run-list"></nav>
+  </aside>
+
+  <main class="stage" id="stage">
+    <div class="empty" id="empty">
+      <p>Pick a run on the left.</p>
+    </div>
+
+    <article id="run-view" hidden>
+      <header class="run-head">
+        <div>
+          <p class="eyebrow" id="run-when"></p>
+          <h1 id="run-name"></h1>
+        </div>
+        <dl class="stats" id="stats"></dl>
+      </header>
+
+      <section class="map-wrap" aria-label="Route replay">
+        <div id="map" role="img" aria-label="Map of the run route"></div>
+        <div class="map-toggle" role="group" aria-label="Color route by">
+          <button type="button" data-metric="pace" aria-pressed="true">Pace</button>
+          <button type="button" data-metric="hr" aria-pressed="false">Heart rate</button>
+        </div>
+        <p class="no-gps" id="no-gps" hidden>No GPS on this run, so there is no route to replay.</p>
+      </section>
+
+      <section class="transport" aria-label="Replay controls">
+        <button type="button" class="play" id="play" aria-label="Play replay"></button>
+        <div class="speed" role="group" aria-label="Replay speed" id="speed"></div>
+        <div class="live" aria-live="off">
+          <div class="cell"><span class="lbl">Time</span><span class="val" id="r-time">0:00</span></div>
+          <div class="cell"><span class="lbl">Distance</span><span class="val" id="r-dist">0.00<small>mi</small></span></div>
+          <div class="cell pace"><span class="lbl">Pace</span><span class="val" id="r-pace">--<small>/mi</small></span></div>
+          <div class="cell hr"><span class="lbl">Heart rate</span><span class="val" id="r-hr">--<small>bpm</small></span></div>
+          <div class="cell"><span class="lbl">Cadence</span><span class="val" id="r-cad">--<small>spm</small></span></div>
+        </div>
+      </section>
+
+      <section class="timeline" aria-label="Pace and heart rate over time">
+        <div id="chart" class="chart" tabindex="0" aria-label="Timeline. Use left and right arrow keys to scrub, space to play."></div>
+        <div class="songs-lane">
+          <span class="lane-label">Songs</span>
+          <span class="lane-empty" id="songs-empty">Import your Spotify history to see what was playing at each point.</span>
+        </div>
+      </section>
+
+      <section class="laps" aria-label="Splits">
+        <h2>Splits</h2>
+        <table id="laps"></table>
+      </section>
+    </article>
+  </main>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

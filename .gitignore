@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+
+# Personal data: GPS routes, HR, listening history. Never commit.
+data/*
+!data/strava-dumps/
+data/strava-dumps/*
+!data/strava-dumps/.gitkeep
+!data/spotify-export/
+data/spotify-export/*
+!data/spotify-export/.gitkeep
