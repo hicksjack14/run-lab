@@ -151,3 +151,77 @@
   .run-row-card .rr-stat:last-child { display: none; }
   .live { margin-left: 0; }
 }
+
+/* ---------- planner ---------- */
+:root {
+  --k-easy: oklch(0.74 0.07 215); --k-strides: oklch(0.8 0.06 215); --k-long: var(--pace);
+  --k-tempo: var(--improve); --k-intervals: var(--hr); --k-race: oklch(0.96 0.02 85);
+}
+.kd-easy { --kc: var(--k-easy); } .kd-strides { --kc: var(--k-strides); } .kd-long { --kc: var(--k-long); }
+.kd-tempo { --kc: var(--k-tempo); } .kd-intervals { --kc: var(--k-intervals); } .kd-race { --kc: var(--k-race); }
+.kind-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--kc, var(--muted)); flex: none; }
+
+.planner-form-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, 1fr); gap: 40px; align-items: start; }
+.goal-form { display: grid; gap: 22px; max-width: 640px; }
+.form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; }
+.form-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.numbers { display: grid; gap: 10px; }
+.overrides { margin-top: 8px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
+.overrides summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; min-height: 28px; }
+.overrides form { display: grid; gap: 12px; margin-top: 12px; }
+
+.plan-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px 32px; margin-bottom: 18px; }
+.plan-head .eyebrow { margin-bottom: 6px; } .plan-head h1 { margin-bottom: 6px; }
+.countdown { display: grid; justify-items: end; gap: 2px; } .countdown .big { font-size: 3rem; }
+.plan-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin-bottom: 14px; }
+.plan-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.plan-warnings { margin: 0 0 14px; padding: 12px 16px 12px 34px; border: 1px solid oklch(0.82 0.15 78 / 0.4); background: oklch(0.82 0.15 78 / 0.08); border-radius: 10px; color: var(--improve); display: grid; gap: 6px; }
+.next-banner { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding: 12px 0; margin-bottom: 8px; border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+.cal-panel { margin-bottom: 14px; }
+.cal-panel summary { cursor: pointer; min-height: 28px; }
+.cal-body { display: grid; gap: 16px; margin-top: 16px; max-width: 720px; }
+.cal-controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; }
+.cal-steps { margin: 0; padding-left: 22px; display: grid; gap: 8px; color: var(--muted); } .cal-steps a { color: var(--text); }
+
+.plan-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 32px; align-items: start; margin-top: 14px; }
+.plan-right { position: sticky; top: calc(var(--topbar) + 16px); display: grid; gap: 16px; }
+.workout-detail { padding: 18px; border: 1px solid var(--line-soft); border-radius: 12px; background: oklch(0.2 0.013 55 / 0.82); display: grid; gap: 10px; min-height: 140px; align-content: start; }
+.wd-top { display: flex; align-items: center; gap: 10px; } .wd-top h2 { flex: 1; }
+.wd-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin: 4px 0; }
+.wd-stats div { display: flex; flex-direction: column-reverse; } .wd-stats dt { font: 500 0.68rem var(--mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); } .wd-stats dd { margin: 0; }
+.status { font: 500 0.7rem var(--mono); letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.st-done.status { color: var(--good); border-color: var(--good); } .st-partial.status { color: var(--improve); border-color: var(--improve); } .st-missed.status { color: var(--doesnt); border-color: var(--doesnt); }
+
+.mileage { margin: 0 0 22px; } .mileage figcaption { margin-bottom: 6px; }
+.mileage-chart { width: 100%; height: auto; display: block; } .mileage-chart text { font: 400 10px var(--mono); fill: var(--faint); }
+.week-grid { display: grid; gap: 4px; }
+.wg-head, .wg-row { display: grid; grid-template-columns: 112px repeat(7, minmax(0, 1fr)) 48px; gap: 4px; align-items: stretch; }
+.wg-head { font: 500 0.68rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); padding-bottom: 4px; }
+.wg-head span:not(:first-child) { text-align: center; } .wg-miles { text-align: right; padding-right: 2px; align-self: center; font-size: 0.85rem; color: var(--muted); }
+.wg-label { display: grid; align-content: center; font-size: 0.85rem; line-height: 1.25; } .wg-label .muted { font-size: 0.75rem; }
+.wg-row.recovery .wg-label strong::after { content: " ↓"; color: var(--faint); }
+.wg-cell { min-height: 56px; border-radius: 8px; position: relative; display: grid; }
+.wg-cell.empty { place-items: center; color: var(--line); }
+.wg-cell.today { box-shadow: 0 0 0 2px var(--focus); }
+.wg-workout {
+  display: grid; align-content: space-between; text-align: left; padding: 7px 8px; min-height: 56px; width: 100%; cursor: pointer; border-radius: 8px;
+  background: color-mix(in oklch, var(--kc) 14%, var(--raised)); border: 1px solid color-mix(in oklch, var(--kc) 38%, transparent);
+  transition: border-color 140ms var(--ease), background 140ms var(--ease);
+}
+.wg-workout:hover { border-color: var(--kc); background: color-mix(in oklch, var(--kc) 22%, var(--raised)); }
+.wg-workout[aria-current="true"] { border-color: var(--kc); box-shadow: inset 0 0 0 1px var(--kc); }
+.wgw-top { display: flex; justify-content: space-between; align-items: baseline; } .wgw-dist { font-size: 1rem; font-weight: 500; } .wgw-kind { font-size: 0.72rem; color: var(--muted); }
+.wgw-mark { font: 600 0.9rem var(--mono); }
+.wg-workout.st-done .wgw-mark { color: var(--good); } .wg-workout.st-partial .wgw-mark { color: var(--improve); } .wg-workout.st-missed .wgw-mark { color: var(--doesnt); }
+.wg-workout.st-missed { opacity: 0.7; }
+.legend { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 20px; padding: 14px 0 0; margin: 0; color: var(--muted); font-size: 0.85rem; }
+.legend li { display: flex; align-items: center; gap: 8px; }
+
+@media (max-width: 1000px) {
+  .plan-main, .planner-form-grid { grid-template-columns: 1fr; }
+  .plan-right { position: static; }
+}
+@media (max-width: 720px) {
+  .wg-head, .wg-row { grid-template-columns: 70px repeat(7, minmax(0, 1fr)); } .wg-miles { display: none; }
+  .wgw-kind { display: none; } .wg-workout { padding: 5px; }
+}

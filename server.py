@@ -152,9 +152,9 @@ def create_app(db_path=None, today=None):
             "total": len(workouts),
         }
         nxt = next((w for w in workouts if w["status"] in ("upcoming", "today")), None)
-        return {"plan": {**{k: row[k] for k in ("id", "created_at", "goal", "race_date", "goal_time_s", "start_date",
-                                                  "days_per_week", "long_run_dow")},
-                         **{k: payload[k] for k in ("weeks", "warnings", "vdot", "projected_time_s", "race_distance_m")}},
+        # goal_time_s comes from the payload: it is the time actually planned for (his goal, or the projection if he gave none)
+        return {"plan": {**{k: row[k] for k in ("id", "created_at", "goal", "race_date", "start_date", "days_per_week", "long_run_dow")},
+                         **{k: payload[k] for k in ("weeks", "warnings", "vdot", "projected_time_s", "race_distance_m", "goal_time_s")}},
                 "workouts": workouts, "stats": stats, "next": nxt,
                 "days_to_race": (date.fromisoformat(row["race_date"]) - today).days}
 
