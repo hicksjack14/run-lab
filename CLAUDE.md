@@ -6,7 +6,7 @@ Jack's personal running app: Strava/Garmin runs + Spotify songs, shown on charts
 
 ## Run it
 ```bash
-cd ~/run-lab
+cd ~/Desktop/Claude-Brain/claude-code/run-lab
 .venv/bin/python server.py            # http://127.0.0.1:5057 (real data)
 .venv/bin/python server.py --demo     # fake demo data (make it first: python -m tools.make_demo_data)
 .venv/bin/python -m pytest -q         # tests
