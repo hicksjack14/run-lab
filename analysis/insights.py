@@ -120,7 +120,7 @@ def load_runs(conn, max_hr):
             {"fade": None, "drift": None, "zone_secs": [0.0] * 5}
         ef = (r["distance_m"] / (r["moving_s"] / 60)) / r["avg_hr"] if r["avg_hr"] else None
         runs.append({
-            "id": r["strava_id"], "name": r["name"], "date": d, "start_hour": int(r["start_local"][11:13]),
+            "id": r["strava_id"], "name": r["name"], "date": d, "start_local": r["start_local"], "start_hour": int(r["start_local"][11:13]),
             "dist_mi": miles, "moving_s": r["moving_s"], "pace": r["moving_s"] / miles, "avg_hr": r["avg_hr"],
             "max_hr_run": r["max_hr"], "ef": ef, "hr_frac": (r["avg_hr"] / max_hr) if r["avg_hr"] and max_hr else None,
             "gear": r["gear_id"], "elev_per_mi": (r["elevation_gain_m"] or 0) * FT / miles,
@@ -214,7 +214,7 @@ def _ramp(runs, today):
             miles[w] += r["dist_mi"]
     spikes = []
     for prev, cur in zip(weeks, weeks[1:]):
-        if miles[prev] >= 5 and miles[cur] > miles[prev] * 1.3:
+        if miles[prev] >= 5 and miles[cur] > miles[prev] * 1.3 and miles[cur] - miles[prev] >= 4:
             spikes.append((cur, miles[prev], miles[cur]))
     if spikes:
         s = max(spikes, key=lambda x: x[2] / x[1])
@@ -438,7 +438,7 @@ def _routes(conn, runs, limit=150, points=70):
     return out
 
 
-def _series(conn, runs, today, max_hr):
+def _series(conn, runs, today, max_hr, gear_names=None):
     first_monday = _monday(runs[0]["date"])
     weekly, w = [], first_monday
     by_week = defaultdict(lambda: [0.0, 0])
@@ -463,15 +463,27 @@ def _series(conn, runs, today, max_hr):
     buckets = [("0-2", 0, 2), ("2-4", 2, 4), ("4-6", 4, 6), ("6-8", 6, 8), ("8+", 8, 99)]
     return {
         "weekly": weekly,
-        "runs": [{"id": r["id"], "name": r["name"], "date": r["date"].isoformat(), "miles": round(r["dist_mi"], 2),
-                  "pace": round(r["pace"]), "hr": round(r["avg_hr"]) if r["avg_hr"] else None,
-                  "ef": round(r["ef"], 4) if r["ef"] else None, "hour": r["start_hour"], "cadence": round(r["cadence"]) if r["cadence"] else None}
-                 for r in runs],
+        "runs": [_run_record(r, gear_names) for r in runs],
         "hours": hours,
         "calendar": {r["date"].isoformat(): 0 for r in []} | _calendar(runs),
         "zones": {"seconds": [round(sum(r["zone_secs"][i] for r in runs)) for i in range(5)], "bands": zones.hr_zones(max_hr) if max_hr else None},
         "distance_hist": [{"label": lab, "runs": sum(1 for r in runs if lo <= r["dist_mi"] < hi)} for lab, lo, hi in buckets],
         "routes": _routes(conn, runs),
+    }
+
+
+def _run_record(r, gear_names):
+    """Everything the explorer shows about one run (hover/click detail)."""
+    zs = [round(x) for x in r["zone_secs"]]
+    dominant = (zs.index(max(zs)) + 1) if sum(zs) > 0 else None
+    return {
+        "id": r["id"], "name": r["name"], "date": r["date"].isoformat(), "start": r["start_local"], "miles": round(r["dist_mi"], 2),
+        "moving_s": round(r["moving_s"]), "pace": round(r["pace"]), "hr": round(r["avg_hr"]) if r["avg_hr"] else None,
+        "max_hr": round(r["max_hr_run"]) if r["max_hr_run"] else None, "ef": round(r["ef"], 4) if r["ef"] else None,
+        "hour": r["start_hour"], "cadence": round(r["cadence"]) if r["cadence"] else None,
+        "elev_ft": round(r["elev_per_mi"] * r["dist_mi"]), "gear": (gear_names or {}).get(r["gear"]) if r["gear"] else None,
+        "zone_secs": zs, "dominant": dominant,
+        "fade": round(r["fade"], 4) if r["fade"] is not None else None, "drift": round(r["drift"], 4) if r["drift"] is not None else None,
     }
 
 
@@ -512,4 +524,4 @@ def analyze(conn, today=None):
     if not runs:
         return {"summary": None, "series": None, "findings": [], "unclear": [], "status": "No runs yet.", "max_hr": max_hr}
     out = build_findings(runs, today, max_hr or 195, gear_names)
-    return {"summary": _summary(runs, today), "series": _series(conn, runs, today, max_hr), "max_hr": max_hr, **out}
+    return {"summary": _summary(runs, today), "series": _series(conn, runs, today, max_hr, gear_names), "max_hr": max_hr, **out}

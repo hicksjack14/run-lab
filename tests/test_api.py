@@ -135,3 +135,14 @@ def test_sync_without_credentials_is_a_clear_error(client, monkeypatch, tmp_path
     monkeypatch.setattr(sa, "ENV_PATH", tmp_path / "missing.env")
     r = client.post("/api/sync")
     assert r.status_code == 400 and "STRAVA_CLIENT_ID" in r.get_json()["error"]
+
+
+def test_places_endpoint_handles_runs_without_gps(client):
+    body = client.get("/api/places").get_json()
+    assert body["routes"] == [] and body["home"] is None
+
+
+def test_analytics_runs_carry_explorer_fields(client):
+    run = client.get("/api/analytics").get_json()["series"]["runs"][0]
+    for key in ("moving_s", "max_hr", "elev_ft", "zone_secs", "dominant", "start", "gear"):
+        assert key in run

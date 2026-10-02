@@ -14,7 +14,7 @@ from pathlib import Path
 from flask import Flask, Response, abort, g, jsonify, request, send_from_directory
 
 import db
-from analysis import fitness, ics, insights, plans, zones
+from analysis import fitness, ics, insights, places, plans, zones
 from analysis.zones import MI
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -214,6 +214,18 @@ def create_app(db_path=None, today=None):
         text = ics.to_ics(payload["workouts"], f"Run Lab: {row['goal']} {row['race_date']}", plan_id=f"rl{row['id']}", start_time=time)
         name = f"run-lab-{row['goal'].lower().replace(' ', '-')}-{row['race_date']}.ics"
         return Response(text, mimetype="text/calendar", headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    # ------------------------------------------------------------------ places (where he runs)
+    @app.get("/api/places")
+    def get_places():
+        c = conn()
+        stamp = ("places", c.execute("SELECT COUNT(*), COALESCE(MAX(start_local), '') FROM runs").fetchone()[:2])
+        if cache.get("places_stamp") != stamp:
+            rows = c.execute("SELECT strava_id, start_local, distance_m FROM runs WHERE has_gps = 1 ORDER BY start_local").fetchall()
+            runs = [{"id": r["strava_id"], "date": date.fromisoformat(r["start_local"][:10]), "dist_mi": r["distance_m"] / MI} for r in rows]
+            routes = insights._routes(c, runs, limit=1000, points=120)
+            cache["places_stamp"], cache["places"] = stamp, {"routes": routes, **places.analyze(routes)}
+        return jsonify(cache["places"])
 
     # ------------------------------------------------------------------ analytics + home
     @app.get("/api/analytics")
