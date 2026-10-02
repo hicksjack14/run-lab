@@ -1,7 +1,18 @@
+import os
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "data" / "runlab.db"
+DATA_DIR = Path(__file__).parent / "data"
+DB_PATH = DATA_DIR / "runlab.db"
+DEMO_PATH = DATA_DIR / "demo.db"
+
+
+def default_path():
+    """Real data by default; RUNLAB_DB=demo (or server.py --demo) switches to the fake demo database."""
+    choice = os.environ.get("RUNLAB_DB")
+    if choice == "demo":
+        return DEMO_PATH
+    return Path(choice) if choice else DB_PATH
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
@@ -65,13 +76,32 @@ CREATE TABLE IF NOT EXISTS plays (
     UNIQUE (end_utc, spotify_uri)
 );
 
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL            -- JSON
+);
+
+CREATE TABLE IF NOT EXISTS plans (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at    TEXT NOT NULL,
+    active        INTEGER NOT NULL DEFAULT 1,
+    goal          TEXT NOT NULL,
+    race_date     TEXT NOT NULL,
+    goal_time_s   REAL,
+    start_date    TEXT NOT NULL,
+    days_per_week INTEGER NOT NULL,
+    long_run_dow  INTEGER NOT NULL,
+    payload       TEXT NOT NULL    -- JSON: weeks, workouts, warnings, vdot used
+);
+
 CREATE INDEX IF NOT EXISTS idx_runs_start_utc ON runs(start_utc);
 CREATE INDEX IF NOT EXISTS idx_plays_start_utc ON plays(start_utc);
 """
 
 
-def connect(path=DB_PATH):
+def connect(path=None):
     """Open the database (creating it and its tables if needed)."""
+    path = default_path() if path is None else path
     path = Path(path) if str(path) != ":memory:" else path
     if path != ":memory:":
         path.parent.mkdir(parents=True, exist_ok=True)

@@ -120,6 +120,7 @@ def test_sync_skips_existing_and_non_runs_and_stops_cleanly(tmp_path):
         "athlete/activities": acts,
         "activities/2/streams": (200, {}, STREAMS),
         "activities/2": detail,
+        "gear/g1": (200, {}, {"name": "Nimbus 26"}),
     })
     conn = db.connect(tmp_path / "t.db")
     conn.execute("INSERT INTO runs (strava_id, start_local, start_utc) VALUES ('1','2026-01-01T00:00:00','2026-01-01T05:00:00Z')")
@@ -128,6 +129,8 @@ def test_sync_skips_existing_and_non_runs_and_stops_cleanly(tmp_path):
     result = strava_api.sync(conn, c, dump_dir=tmp_path / "dumps")
     assert result == {"imported": ["2"], "skipped": 1, "rate_limited": False}
     assert (tmp_path / "dumps" / "2.json").exists()
+    from analysis import fitness
+    assert fitness.get_settings(conn)["gear_names"] == {"g1": "Nimbus 26"}
     assert conn.execute("SELECT COUNT(*) FROM runs WHERE strava_id='2'").fetchone()[0] == 1
 
 
@@ -143,6 +146,7 @@ def test_sync_reports_rate_limit_and_keeps_progress(tmp_path):
         "athlete/activities": lambda url: (200, {}, activities if url.endswith("&page=1") else []),
         "activities/2/streams": (200, {}, STREAMS),
         "activities/": detail,
+        "gear/g1": (200, {}, {"name": "Nimbus 26"}),
     })
     conn = db.connect(tmp_path / "t.db")
     c = make_client(tmp_path, http, {"access_token": "ok", "refresh_token": "r", "expires_at": time.time() + 3600})

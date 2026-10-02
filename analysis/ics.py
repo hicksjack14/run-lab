@@ -3,7 +3,7 @@
 Times are "floating" (no timezone), so a 5:00 PM run shows at 5:00 PM wherever the calendar is read.
 UIDs are stable per plan + date + workout kind, so re-importing the same plan updates events.
 """
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 
 def _escape(text):
@@ -26,7 +26,7 @@ def _fold(line):
 
 
 def to_ics(workouts, calendar_name, plan_id="plan", start_time="17:00", now=None):
-    now = now or datetime.utcnow()
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
     hh, mm = (int(x) for x in start_time.split(":"))
     lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Run Lab//Training Plan//EN", "CALSCALE:GREGORIAN",
              f"X-WR-CALNAME:{_escape(calendar_name)}"]

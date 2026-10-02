@@ -60,7 +60,8 @@ def _urllib_http(method, url, headers=None, data=None):
         return e.code, dict(e.headers), body
 
 
-def load_env(path=ENV_PATH):
+def load_env(path=None):
+    path = path or ENV_PATH
     cfg = {}
     if path.exists():
         for line in path.read_text().splitlines():
@@ -134,6 +135,10 @@ class StravaClient:
                     yield a
             page += 1
 
+    def gear_name(self, gear_id):
+        g = self.get(f"/gear/{gear_id}")
+        return g.get("name") or " ".join(x for x in (g.get("brand_name"), g.get("model_name")) if x) or None
+
     def fetch_run(self, run_id):
         detail = self.get(f"/activities/{run_id}")
         streams = self.get(f"/activities/{run_id}/streams", keys=STREAM_KEYS, key_by_type="true")
@@ -196,9 +201,20 @@ def sync(conn, client, dump_dir=DUMP_DIR, limit=None, log=print):
             import_dump(conn, dump)
             imported.append(rid)
             log(f"  imported {rid}  {dump['activity']['start_local'][:10]}  {dump['activity']['name']}")
+        _fill_gear_names(conn, client)
     except RateLimited:
         return {"imported": imported, "skipped": skipped, "rate_limited": True}
     return {"imported": imported, "skipped": skipped, "rate_limited": False}
+
+
+def _fill_gear_names(conn, client):
+    """Look up a readable name for each shoe id we have not named yet (1 request each)."""
+    from analysis import fitness
+    names = fitness.get_settings(conn).get("gear_names", {})
+    for (gid,) in conn.execute("SELECT DISTINCT gear_id FROM runs WHERE gear_id IS NOT NULL").fetchall():
+        if gid not in names:
+            names[gid] = client.gear_name(gid) or gid
+            fitness.set_setting(conn, "gear_names", names)
 
 
 def run_auth(client):
