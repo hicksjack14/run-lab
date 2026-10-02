@@ -46,6 +46,12 @@ class RateLimited(Exception):
     pass
 
 
+class StravaError(RuntimeError):
+    def __init__(self, path, status, body):
+        super().__init__(f"Strava {path} returned {status}: {body}")
+        self.status = status
+
+
 def _urllib_http(method, url, headers=None, data=None):
     req = urllib.request.Request(url, data=data.encode() if data else None, headers=headers or {}, method=method)
     try:
@@ -120,7 +126,7 @@ class StravaClient:
         if status == 401:
             sys.exit("Strava says the token is not valid. Run: python -m ingest.strava_api auth")
         if status != 200:
-            raise RuntimeError(f"Strava {path} returned {status}: {body}")
+            raise StravaError(path, status, body)
         return body
 
     def list_runs(self):
@@ -212,9 +218,15 @@ def _fill_gear_names(conn, client):
     from analysis import fitness
     names = fitness.get_settings(conn).get("gear_names", {})
     for (gid,) in conn.execute("SELECT DISTINCT gear_id FROM runs WHERE gear_id IS NOT NULL").fetchall():
-        if gid not in names:
-            names[gid] = client.gear_name(gid) or gid
-            fitness.set_setting(conn, "gear_names", names)
+        if gid in names:
+            continue
+        try:
+            names[gid] = client.gear_name(gid) or ""
+        except StravaError as e:
+            if e.status not in (400, 404):
+                continue                  # a temporary problem: try again next sync
+            names[gid] = ""               # Strava will never give a name for this id; stop asking
+        fitness.set_setting(conn, "gear_names", names)
 
 
 def run_auth(client):

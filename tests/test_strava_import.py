@@ -103,3 +103,13 @@ def test_run_without_gps_is_flagged():
     import_dump(conn, dump)
     assert conn.execute("SELECT has_gps FROM runs").fetchone()["has_gps"] == 0
     assert conn.execute("SELECT lat FROM run_streams LIMIT 1").fetchone()["lat"] is None
+
+
+def test_digit_only_gear_ids_get_the_g_prefix_the_api_uses():
+    conn = db.connect(":memory:")
+    dump = {**DUMP, "activity": {**DUMP["activity"], "gear_id": "33590599"}}
+    import_dump(conn, dump)
+    assert conn.execute("SELECT gear_id FROM runs").fetchone()[0] == "g33590599"
+    dump["activity"]["gear_id"] = "g33590599"          # already in API form: unchanged
+    import_dump(conn, dump)
+    assert conn.execute("SELECT gear_id FROM runs").fetchone()[0] == "g33590599"

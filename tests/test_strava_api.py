@@ -152,3 +152,18 @@ def test_sync_reports_rate_limit_and_keeps_progress(tmp_path):
     c = make_client(tmp_path, http, {"access_token": "ok", "refresh_token": "r", "expires_at": time.time() + 3600})
     result = strava_api.sync(conn, c, dump_dir=tmp_path / "dumps")
     assert result["imported"] == ["2"] and result["rate_limited"] is True
+
+
+def test_a_failed_shoe_lookup_never_breaks_the_sync(tmp_path):
+    http = FakeHttp({
+        "athlete/activities": lambda url: (200, {}, [{"id": 2, "type": "Run", "sport_type": "Run"}] if url.endswith("&page=1") else []),
+        "activities/2/streams": (200, {}, STREAMS),
+        "activities/2": (200, {}, {**DETAIL, "id": 2}),
+        "gear/g1": (400, {}, {"message": "Bad Request"}),
+    })
+    conn = db.connect(tmp_path / "t.db")
+    c = make_client(tmp_path, http, {"access_token": "ok", "refresh_token": "r", "expires_at": time.time() + 3600})
+    result = strava_api.sync(conn, c, dump_dir=tmp_path / "dumps")
+    assert result["imported"] == ["2"] and result["rate_limited"] is False
+    from analysis import fitness
+    assert fitness.get_settings(conn)["gear_names"] == {"g1": ""}

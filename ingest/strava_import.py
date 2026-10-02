@@ -44,6 +44,9 @@ def import_dump(conn, dump):
 
     location = streams.get("location")
     avg_cad = summary.get("avg_cadence")
+    gear_id = act.get("gear_id")
+    if gear_id is not None and str(gear_id).isdigit():
+        gear_id = f"g{gear_id}"          # the Strava connector drops the "g" that the API (and gear lookups) expect
 
     conn.execute(
         """INSERT INTO runs (strava_id, name, start_local, tz, start_utc, distance_m, moving_s,
@@ -60,7 +63,7 @@ def import_dump(conn, dump):
             sid, act.get("name"), act["start_local"], tz, local_to_utc(act["start_local"], tz),
             summary.get("distance"), summary.get("moving_time"), summary.get("elapsed_time"),
             summary.get("elevation_gain"), perf.get("average_heartrate"), perf.get("max_heartrate"),
-            _spm(avg_cad), summary.get("relative_effort"), act.get("gear_id"),
+            _spm(avg_cad), summary.get("relative_effort"), gear_id,
             1 if location else 0,
         ),
     )

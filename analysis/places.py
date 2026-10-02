@@ -11,6 +11,7 @@ MI = 1609.344
 EARTH_M = 6_371_000.0
 GPS_GAP_M = 5_000        # a jump bigger than this between samples is a GPS gap, not running
 AREA_CELL_M = 1_000      # starts within the same 1 km square count as the same place
+REGION_LINK_M = 25_000   # start areas within 25 km of each other belong to the same region (a city and its suburbs)
 
 
 def haversine_m(a, b):
@@ -42,10 +43,41 @@ def cells_for_route(pts, lat0, size_m=250, step_m=50):
     return cells
 
 
+def _regions(routes, groups, home):
+    """Group start areas that are close together into regions (e.g. Syracuse, a summer in NYC, home for break)."""
+    cells = list(groups)
+    parent = {c: c for c in cells}
+
+    def find(c):
+        while parent[c] != c:
+            parent[c] = parent[parent[c]]
+            c = parent[c]
+        return c
+
+    centre = {c: (sum(r["pts"][0][0] for r in groups[c]) / len(groups[c]), sum(r["pts"][0][1] for r in groups[c]) / len(groups[c])) for c in cells}
+    for i, a in enumerate(cells):
+        for b in cells[i + 1:]:
+            if haversine_m(centre[a], centre[b]) <= REGION_LINK_M:
+                parent[find(a)] = find(b)
+    merged = defaultdict(list)
+    for c in cells:
+        merged[find(c)].extend(groups[c])
+    out = []
+    for rs in merged.values():
+        pts = [p for r in rs for p in r["pts"]]
+        starts = [r["pts"][0] for r in rs]
+        out.append({"runs": len(rs), "miles": round(sum(r["miles"] for r in rs), 2), "first": min(r["date"] for r in rs), "last": max(r["date"] for r in rs),
+                    "lat": sum(p[0] for p in starts) / len(starts), "lng": sum(p[1] for p in starts) / len(starts),
+                    "bounds": [[min(p[0] for p in pts), min(p[1] for p in pts)], [max(p[0] for p in pts), max(p[1] for p in pts)]],
+                    "route_ids": [r["id"] for r in rs], "home": any(haversine_m((home["lat"], home["lng"]), r["pts"][0]) <= REGION_LINK_M for r in rs)})
+    out.sort(key=lambda r: (-r["runs"], r["first"]))
+    return out
+
+
 def analyze(routes, size_m=250):
     routes = sorted((r for r in routes if r.get("pts")), key=lambda r: r["date"])
     if not routes:
-        return {"home": None, "farthest": None, "areas": [], "exploration": {"cells_total": 0, "cumulative": [], "monthly": []}}
+        return {"home": None, "farthest": None, "areas": [], "regions": [], "exploration": {"cells_total": 0, "cumulative": [], "monthly": []}}
     all_pts = [p for r in routes for p in r["pts"]]
     lat0 = sum(p[0] for p in all_pts) / len(all_pts)
 
@@ -84,5 +116,5 @@ def analyze(routes, size_m=250):
     monthly = [{"month": m, "new": len(month_new[m]), "visited": len(month_visited[m]),
                 "share_new": len(month_new[m]) / len(month_visited[m]) if month_visited[m] else 0.0}
                for m in sorted(month_visited)]
-    return {"home": home, "farthest": farthest, "areas": areas[:6],
+    return {"home": home, "farthest": farthest, "areas": areas[:6], "regions": _regions(routes, groups, home),
             "exploration": {"cells_total": len(seen), "cell_m": size_m, "cumulative": cumulative, "monthly": monthly}}

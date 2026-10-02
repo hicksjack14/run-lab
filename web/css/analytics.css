@@ -162,3 +162,7 @@ svg .ax-title { font: 500 11px var(--mono); fill: var(--muted); letter-spacing: 
   .ex-main, .pl-main { grid-template-columns: 1fr; }
   .ex-detail, .pl-map { position: static; }
 }
+
+.pl-regions { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: oklch(0.17 0.012 55 / 0.96); }
+.chip-btn { min-height: 34px; padding: 0 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--sunken); color: var(--muted); cursor: pointer; font: 500 0.8rem var(--font); transition: color 160ms var(--ease), border-color 160ms var(--ease), background 160ms var(--ease); }
+.chip-btn:hover { color: var(--text); border-color: var(--faint); background: var(--raised); }

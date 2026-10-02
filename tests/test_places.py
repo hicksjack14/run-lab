@@ -89,3 +89,22 @@ def test_top_areas_group_nearby_starts_and_sum_miles():
 def test_empty_input_is_safe():
     out = places.analyze([])
     assert out["home"] is None and out["exploration"]["cumulative"] == [] and out["areas"] == []
+
+
+def test_far_apart_cities_become_separate_regions_with_bounds():
+    home = square_loop([LAT, LNG])
+    away = square_loop([36.0, -86.8])                                       # roughly Nashville
+    runs = [route(str(i), f"2026-05-{i + 1:02d}", home) for i in range(5)] + [route("t1", "2026-08-01", away), route("t2", "2026-08-03", away)]
+    regions = places.analyze(runs)["regions"]
+    assert [r["runs"] for r in regions] == [5, 2]
+    assert regions[0]["home"] is True and regions[1]["home"] is False
+    assert regions[1]["first"] == "2026-08-01" and regions[1]["last"] == "2026-08-03" and set(regions[1]["route_ids"]) == {"t1", "t2"}
+    (lat0, lng0), (lat1, lng1) = regions[1]["bounds"]
+    assert lat0 <= 36.0 - 0.003 and lat1 >= 36.0 + 0.003 and lng0 < lng1
+
+
+def test_neighbouring_start_areas_in_one_city_stay_one_region():
+    a = square_loop([LAT, LNG])
+    b = square_loop(offset(LAT, LNG, 6000, 0))                              # 6 km north: same city, different start area
+    regions = places.analyze([route("1", "2026-05-01", a), route("2", "2026-05-02", b)])["regions"]
+    assert len(regions) == 1 and regions[0]["runs"] == 2

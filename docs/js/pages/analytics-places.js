@@ -33,7 +33,16 @@ export async function render(view, ctx) {
   const dateLabel = h("span", { class: "mono pl-date" });
   const slider = h("input", { type: "range", min: 1, max: routes.length, value: routes.length, "aria-label": "Show runs up to this date", class: "pl-slider" });
   const playBtn = h("button", { type: "button", class: "btn btn-quiet" }, "Replay");
-  const mapWrap = h("section", { class: "pl-map", "aria-label": "Route map" }, mapEl,
+  const regions = data.regions || [];
+  const fitRegion = (r) => map.fitBounds(r ? r.bounds : allBounds, { padding: [40, 40] });
+  const regionLabel = (r, i) => {
+    const span = r.first === r.last ? fmtDay(r.first, { month: "short", day: "numeric" }) : `${fmtDay(r.first, { month: "short", day: "numeric" })} to ${fmtDay(r.last, { month: "short", day: "numeric" })}`;
+    return `${r.home ? "Home base area" : `Place ${i + 1}`} · ${r.runs} run${r.runs === 1 ? "" : "s"} · ${span}`;
+  };
+  const chipRow = regions.length > 1 ? h("div", { class: "pl-regions", role: "group", "aria-label": "Jump to a region" },
+    h("button", { type: "button", class: "chip-btn", onclick: () => fitRegion(null) }, `All places (${regions.length})`),
+    regions.map((r, i) => h("button", { type: "button", class: "chip-btn", onclick: () => fitRegion(r) }, regionLabel(r, i)))) : null;
+  const mapWrap = h("section", { class: "pl-map", "aria-label": "Route map" }, chipRow, mapEl,
     h("div", { class: "pl-controls" }, playBtn, slider, dateLabel));
 
   // ---------- side ----------
@@ -55,7 +64,7 @@ export async function render(view, ctx) {
 
   view.replaceChildren(h("div", { class: "page places" },
     h("header", { class: "page-head" }, h("div", {}, h("p", { class: "eyebrow" }, "Analytics · Places"), h("h1", {}, "Where you run")),
-      h("p", { class: "muted pl-lede" }, `${routes.length} runs, ${sqMi.toFixed(1)} square miles of ground since ${fmtDay(routes[0].date, { month: "long", day: "numeric" })}.`)),
+      h("p", { class: "muted pl-lede" }, `${routes.length} runs${regions.length > 1 ? ` in ${regions.length} regions` : ""}, ${sqMi.toFixed(1)} square miles of ground since ${fmtDay(routes[0].date, { month: "long", day: "numeric" })}.`)),
     h("div", { class: "pl-main" }, mapWrap, side)));
 
   // ---------- leaflet ----------
@@ -67,8 +76,8 @@ export async function render(view, ctx) {
     line.on("click", () => { location.hash = `#/runs/${r.id}`; });
     return line;
   });
-  const bounds = L.latLngBounds(routes.flatMap((r) => r.pts));
-  map.fitBounds(bounds, { padding: [40, 40] });
+  const allBounds = L.latLngBounds(routes.flatMap((r) => r.pts));
+  fitRegion(regions.length > 1 ? regions[0] : null);   // open on the place you run most, not on the whole country
   L.circleMarker([data.home.lat, data.home.lng], { radius: 9, color: "#fff", weight: 2, fillColor: "#000", fillOpacity: 0.55 }).addTo(map).bindTooltip("Home base", { permanent: false });
   L.circleMarker([data.farthest.lat, data.farthest.lng], { radius: 7, color: "#fff", weight: 2, fillColor: "#e8654a", fillOpacity: 0.9 }).addTo(map)
     .bindTooltip(`Furthest: ${data.farthest.miles.toFixed(1)} mi from home`, { permanent: false });
