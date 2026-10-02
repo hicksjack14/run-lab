@@ -7,7 +7,7 @@ const SPEEDS = [10, 30, 60, 120];
 const PAD = { l: 44, r: 44, t: 14, b: 24 };
 const lerp = (a, b, f) => a + (b - a) * f;
 
-const PACE_RAMP = [[0.58, 0.13, 255], [0.72, 0.12, 200], [0.87, 0.16, 112]];   // slow cool -> fast lime
+const PACE_RAMP = [[0.5, 0.1, 268], [0.7, 0.11, 242], [0.9, 0.09, 215]];   // slow deep blue -> fast pale sky
 const HR_RAMP = [[0.74, 0.1, 215], [0.76, 0.16, 85], [0.68, 0.22, 28]];        // calm -> hot
 function ramp(stops, f) {
   f = Math.min(1, Math.max(0, f));

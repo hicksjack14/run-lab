@@ -5,6 +5,7 @@ import * as home from "./pages/home.js";
 import * as runs from "./pages/runs.js";
 import * as run from "./pages/run.js";
 import * as planner from "./pages/planner.js";
+import * as calculator from "./pages/calculator.js";
 import * as analytics from "./pages/analytics.js";
 
 const ROUTES = [
@@ -12,6 +13,7 @@ const ROUTES = [
   { re: /^#\/runs$/, page: runs, nav: "runs", title: "Runs" },
   { re: /^#\/runs\/([^/]+)$/, page: run, nav: "runs", title: "Run" },
   { re: /^#\/plan$/, page: planner, nav: "plan", title: "Planner" },
+  { re: /^#\/calc$/, page: calculator, nav: "calc", title: "Calculator" },
   { re: /^#\/analytics(?:\/(story|explore|places))?$/, page: analytics, nav: "analytics", title: "Analytics" },
 ];
 

@@ -11,9 +11,9 @@ const oklch = (stops, f) => {
   const [a, b] = [stops[i], stops[i + 1]];
   return `oklch(${lerp(a[0], b[0], l).toFixed(3)} ${lerp(a[1], b[1], l).toFixed(3)} ${lerp(a[2], b[2], l).toFixed(1)})`;
 };
-const TIME_RAMP = [[0.62, 0.13, 250], [0.87, 0.16, 112], [0.8, 0.17, 45]];             // old (cool) -> new (warm) route
+const TIME_RAMP = [[0.6, 0.14, 268], [0.84, 0.1, 225], [0.8, 0.17, 45]];             // old (cool) -> new (warm) route
 const HR_RAMP = [[0.74, 0.1, 215], [0.76, 0.16, 85], [0.68, 0.22, 28]];                // calm -> hot
-const EFF_RAMP = [[0.68, 0.17, 30], [0.78, 0.03, 80], [0.82, 0.15, 150]];              // worse -> par -> better
+const EFF_RAMP = [[0.68, 0.17, 30], [0.8, 0.03, 235], [0.82, 0.14, 160]];              // worse -> par -> better
 const hourLabel = (hr) => `${((hr + 11) % 12) + 1}${hr < 12 ? " AM" : " PM"}`;
 const ease = (t) => 1 - Math.pow(1 - t, 3);
 

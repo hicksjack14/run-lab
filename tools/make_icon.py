@@ -1,4 +1,4 @@
-"""Draw the Run Lab app icon: the lime + coral rings from the logo, with the replay marker dot on the outer ring.
+"""Draw the Run Lab app icon: the light-blue + coral rings from the logo, with the replay marker dot on the outer ring.
 
 Needs Pillow (the system python has it):   python3 tools/make_icon.py
 Writes web/icons/: icon.svg, icon-1024.png (upload this one to Strava), icon-512.png, apple-touch-icon.png, favicon-32.png.
@@ -22,7 +22,7 @@ def oklch_hex(L, C, h):
     return "#%02x%02x%02x" % tuple(enc(v) for v in rgb)
 
 
-BG, LIME, CORAL, CREAM = oklch_hex(0.165, 0.012, 55), oklch_hex(0.87, 0.16, 112), oklch_hex(0.72, 0.19, 33), oklch_hex(0.96, 0.02, 85)
+BG, LIME, CORAL, CREAM = oklch_hex(0.18, 0.04, 258), oklch_hex(0.84, 0.1, 225), oklch_hex(0.72, 0.19, 33), oklch_hex(0.96, 0.02, 235)   # LIME is now the light-blue pace colour
 # geometry on a 1024 grid: (outer radius, inner radius) of each ring, and the marker dot on the lime ring at -40 degrees
 LIME_RING, CORAL_RING = (392, 296), (244, 160)
 MARK_R, MARK_ANGLE, MARK_DOT, MARK_EDGE = 344, -40, 58, 16

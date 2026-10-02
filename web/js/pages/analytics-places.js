@@ -5,7 +5,7 @@ import { h, s, skeleton, reducedMotion } from "../lib/dom.js";
 import { fmtDay, parseLocal } from "../lib/fmt.js";
 
 const lerp = (a, b, f) => a + (b - a) * f;
-const TIME_RAMP = [[0.62, 0.13, 250], [0.87, 0.16, 112], [0.8, 0.17, 45]];
+const TIME_RAMP = [[0.6, 0.14, 268], [0.84, 0.1, 225], [0.8, 0.17, 45]];
 function ramp(f) {
   f = Math.min(1, Math.max(0, f));
   const i = Math.min(TIME_RAMP.length - 2, Math.floor(f * (TIME_RAMP.length - 1))), l = f * (TIME_RAMP.length - 1) - i;

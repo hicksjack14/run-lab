@@ -14,7 +14,7 @@ from pathlib import Path
 from flask import Flask, Response, abort, g, jsonify, request, send_from_directory
 
 import db
-from analysis import fitness, ics, insights, music_match, places, plans, zones
+from analysis import calculator, fitness, ics, insights, music_match, places, plans, zones
 from analysis.zones import MI
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -233,6 +233,11 @@ def create_app(db_path=None, today=None):
         text = ics.to_ics(payload["workouts"], f"Run Lab: {row['goal']} {row['race_date']}", plan_id=f"rl{row['id']}", start_time=time)
         name = f"run-lab-{row['goal'].lower().replace(' ', '-')}-{row['race_date']}.ics"
         return Response(text, mimetype="text/calendar", headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    # ------------------------------------------------------------------ race-time calculator
+    @app.get("/api/calc")
+    def get_calc():
+        return jsonify(calculator.build(conn(), get_today()))
 
     # ------------------------------------------------------------------ places (where he runs)
     @app.get("/api/places")

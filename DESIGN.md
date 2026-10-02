@@ -1,19 +1,19 @@
 ---
 name: Run Lab
-description: Race-night telemetry for one runner's season. Warm charcoal, lime for pace, coral for heart rate.
+description: Race-night telemetry for one runner's season. Deep navy and light blue, with coral for heart rate.
 colors:
-  bg: "oklch(0.165 0.012 55)"
-  raised: "oklch(0.205 0.014 55)"
-  sunken: "oklch(0.135 0.012 55)"
-  line: "oklch(0.3 0.014 55)"
-  text: "oklch(0.94 0.01 80)"
-  muted: "oklch(0.73 0.018 70)"
-  faint: "oklch(0.58 0.016 65)"
-  pace: "oklch(0.87 0.16 112)"
+  bg: "oklch(0.18 0.04 258)"
+  raised: "oklch(0.228 0.045 258)"
+  sunken: "oklch(0.145 0.035 258)"
+  line: "oklch(0.33 0.05 255)"
+  text: "oklch(0.95 0.015 235)"
+  muted: "oklch(0.77 0.035 240)"
+  faint: "oklch(0.63 0.04 245)"
+  pace: "oklch(0.84 0.1 225)"
   heart-rate: "oklch(0.72 0.19 33)"
-  good: "oklch(0.8 0.14 150)"
+  good: "oklch(0.82 0.14 160)"
   improve: "oklch(0.82 0.15 78)"
-  works: "oklch(0.8 0.11 205)"
+  works: "oklch(0.78 0.12 290)"
   doesnt: "oklch(0.7 0.17 15)"
 typography:
   body:
@@ -39,20 +39,20 @@ rounded:
 Open after a run, at a laptop, in a dim room: precise, instrument-like, honest. Tools (Home, Runs, Planner) are calm and fast to read. Analytics is the one expressive page, with motion that shows change over time. It rejects generic SaaS analytics (rows of identical stat cards, default blue lines) and cutesy gamified fitness (badges, confetti).
 
 **Key Characteristics:**
-- Every number is monospaced; pace is lime, heart rate is coral, everywhere.
+- Every number is monospaced; pace is light blue, heart rate is coral, everywhere.
 - A static topographic contour backdrop gives atmosphere without motion on tool pages.
 - Motion only explains: playback, bars rising, dots flowing, rings filling. All of it degrades to a still picture under reduced motion.
 
 ## 2. Colors
 
-A warm charcoal base with two data colors that never change meaning.
+A deep navy base with two data colors that never change meaning.
 
-- **Pace Lime** (oklch(0.87 0.16 112)): pace lines, easy-pace text, the active nav marker.
+- **Pace Sky** (oklch(0.84 0.1 225)): pace lines, easy-pace text, the active nav marker, the logo ring.
 - **Heart Coral** (oklch(0.72 0.19 33)): heart-rate lines and values.
 - **Finding colors** (green good, amber improve, teal works, rose doesn't): only on findings and plan status.
-- **Neutrals** are tinted toward the warm hue; never pure black or white.
+- **Neutrals** are tinted toward navy; never pure black or white.
 
-**The Two-Colors Rule.** Lime always means pace and coral always means heart rate. Never reuse them decoratively.
+**The Two-Colors Rule.** Light blue always means pace and coral always means heart rate. Never reuse them decoratively.
 
 ## 3. Typography
 
@@ -64,7 +64,7 @@ Familjen Grotesk for text, DM Mono for all data and labels, Big Shoulders Displa
 
 ## 4. Elevation
 
-Flat. Depth comes from tonal layers (sunken, bg, raised) and 1px lines, not shadows. The only shadow is the toast.
+Flat. Depth comes from tonal layers of navy (sunken, bg, raised) and 1px lines, not shadows. The only shadow is the toast.
 
 ## 5. Components
 

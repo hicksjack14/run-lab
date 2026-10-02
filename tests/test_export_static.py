@@ -40,7 +40,7 @@ def run_export(source, tmp_path, **kw):
 def test_writes_the_site_and_data_files(source, tmp_path):
     out, summary = run_export(source, tmp_path, trim_m=0)
     for rel in ("index.html", "js/main.js", "css/base.css", ".nojekyll", "data/meta.json", "data/runs.json", "data/home.json",
-                "data/fitness.json", "data/analytics.json", "data/places.json", "data/plan.json", "data/runs/900.json"):
+                "data/fitness.json", "data/analytics.json", "data/places.json", "data/plan.json", "data/calc.json", "data/runs/900.json"):
         assert (out / rel).exists(), rel
     assert summary["runs"] == 1
 

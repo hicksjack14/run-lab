@@ -23,9 +23,9 @@ Restart the server after editing Python modules (no auto-reload of imports).
 ## Layout
 - `db.py`: SQLite schema + `connect()`. Real DB `data/runlab.db`; demo DB `data/demo.db` (`RUNLAB_DB=demo` or `--demo`).
 - `ingest/`: `strava_api.py` (OAuth + resumable sync), `strava_import.py` (dump loader), `spotify_import.py` (export -> `plays`).
-- `analysis/` (pure, unit-tested): `zones.py` (VDOT, paces, HR zones), `fitness.py` (current numbers + overrides + plan adherence), `plans.py` (plan generator), `ics.py` (Google Calendar export), `insights.py` (findings + analytics series), `places.py` (home base, new ground), `music_match.py` (songs on runs + music findings).
+- `analysis/` (pure, unit-tested): `zones.py` (VDOT, paces, HR zones), `fitness.py` (current numbers + overrides + plan adherence), `plans.py` (plan generator), `ics.py` (Google Calendar export), `insights.py` (findings + analytics series), `places.py` (home base, new ground), `music_match.py` (songs on runs + music findings), `calculator.py` (model for the race-time calculator: his pace-vs-distance fade, stopping habit, HR at pace, fitness race curve).
 - `server.py`: Flask on `127.0.0.1` only. JSON API + serves `web/`.
-- `web/`: no build step. `js/main.js` router; `js/pages/` home, runs, run, planner, analytics (+ `-story`, `-explore`, `-places`); `css/` base, pages, analytics.
+- `web/`: no build step. `js/main.js` router; `js/pages/` home, runs, run, planner, calculator, analytics (+ `-story`, `-explore`, `-places`); `css/` base, pages, analytics.
 - `tools/make_demo_data.py`: generates ~80 fake runs (with planted patterns the tests look for).
 - `PRODUCT.md` / `DESIGN.md`: design context (read before any UI work).
 - `data/`: gitignored: databases, `strava-dumps/`, `spotify-export/`, `strava_token.json`.
@@ -67,3 +67,6 @@ After writing a dump, ALWAYS check every stream array has the same length (a mis
 - Pages setup (Jack, once): repo must be public (free) or Pro; Settings > Pages > Deploy from branch `master`, folder `/docs`. Site: https://hicksjack14.github.io/run-lab/
 - The snapshot is public: it contains run stats, trimmed routes, and listening-derived findings. Never commit `data/`.
 - Preview locally: `python -m tools.export_static --demo --out .static-preview` then launch config "Run Lab (static snapshot)".
+
+## Theme
+Deep navy + light blue (see `DESIGN.md`). Light blue = pace, coral = heart rate. Neutrals are navy-tinted oklch at hue ~258. Changing the palette means `web/css/base.css` tokens, the JS color ramps (`PACE_RAMP`/`TIME_RAMP`/`EFF_RAMP`), `web/js/lib/backdrop.js`, and `tools/make_icon.py` (then `python3 tools/make_icon.py`).

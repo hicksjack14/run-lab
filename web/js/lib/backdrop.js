@@ -46,7 +46,7 @@ export function drawBackdrop(canvas) {
   for (let L = 1; L < levels; L++) {
     const iso = L / levels;
     const index = L % 4 === 0; // every 4th line is an "index contour", slightly stronger
-    ctx.strokeStyle = index ? "oklch(0.62 0.045 75 / 0.2)" : "oklch(0.55 0.035 70 / 0.1)";
+    ctx.strokeStyle = index ? "oklch(0.68 0.08 235 / 0.22)" : "oklch(0.6 0.07 240 / 0.11)";
     ctx.beginPath();
     for (let j = 0; j < rows - 1; j++) {
       for (let i = 0; i < cols - 1; i++) {

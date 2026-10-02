@@ -16,7 +16,7 @@
   padding: 10px 14px; border-radius: 10px; text-decoration: none; min-height: 64px;
   border: 1px solid transparent; transition: background 160ms var(--ease), border-color 160ms var(--ease);
 }
-.run-row-card:hover { background: oklch(0.21 0.014 55 / 0.9); border-color: var(--line-soft); }
+.run-row-card:hover { background: oklch(0.21 0.042 258 / 0.9); border-color: var(--line-soft); }
 .rr-name { display: grid; min-width: 0; }
 .rr-name strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rr-name .muted { font-size: 0.85rem; }
@@ -64,7 +64,7 @@
 .runs-summary { font-size: 0.85rem; }
 .table-wrap { overflow-x: auto; }
 .runs-table { width: 100%; border-collapse: collapse; min-width: 720px; }
-.runs-table th { padding: 0; border-bottom: 1px solid var(--line); text-align: right; position: sticky; top: var(--topbar); background: oklch(0.15 0.012 55 / 0.96); }
+.runs-table th { padding: 0; border-bottom: 1px solid var(--line); text-align: right; position: sticky; top: var(--topbar); background: oklch(0.15 0.036 258 / 0.96); }
 .runs-table th.left, .runs-table td.left { text-align: left; }
 .th-btn { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 12px 12px; cursor: pointer; font: 500 0.7rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
 .th-btn:hover { color: var(--text); } .th-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
@@ -72,7 +72,7 @@
 .row-link { display: block; padding: 13px 12px; text-decoration: none; min-height: 46px; }
 .runs-table td.name { font-weight: 500; }
 .run-row { cursor: pointer; transition: background 140ms var(--ease); }
-.run-row:hover { background: oklch(0.21 0.014 55 / 0.9); }
+.run-row:hover { background: oklch(0.21 0.042 258 / 0.9); }
 
 /* ---------- run detail ---------- */
 .run-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 18px 40px; margin-bottom: 20px; }
@@ -86,16 +86,16 @@
 .stats dd small, .live small { font-size: 0.62em; color: var(--muted); margin-left: 3px; }
 
 .map-wrap { position: relative; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--raised); }
-#map { height: clamp(320px, 52vh, 580px); background: oklch(0.19 0.012 55); }
-.leaflet-container { font-family: var(--font); background: oklch(0.19 0.012 55); }
+#map { height: clamp(320px, 52vh, 580px); background: oklch(0.19 0.036 258); }
+.leaflet-container { font-family: var(--font); background: oklch(0.19 0.036 258); }
 .leaflet-tile-pane { filter: invert(1) hue-rotate(188deg) saturate(0.55) brightness(0.82) contrast(0.92); }
-.leaflet-control-attribution { background: oklch(0.17 0.012 55 / 0.8) !important; color: var(--faint) !important; }
+.leaflet-control-attribution { background: oklch(0.17 0.036 258 / 0.8) !important; color: var(--faint) !important; }
 .leaflet-control-attribution a { color: var(--muted) !important; }
-.map-toggle { position: absolute; z-index: 500; top: 12px; right: 12px; display: flex; padding: 3px; gap: 2px; background: oklch(0.17 0.012 55 / 0.9); border: 1px solid var(--line); border-radius: 8px; }
+.map-toggle { position: absolute; z-index: 500; top: 12px; right: 12px; display: flex; padding: 3px; gap: 2px; background: oklch(0.17 0.036 258 / 0.9); border: 1px solid var(--line); border-radius: 8px; }
 .map-toggle button { border: 0; background: none; cursor: pointer; padding: 7px 12px; min-height: 36px; border-radius: 6px; font-size: 0.86rem; color: var(--muted); transition: background 160ms var(--ease), color 160ms var(--ease); }
 .map-toggle button[aria-pressed="true"] { background: var(--text); color: var(--bg); font-weight: 600; }
 .no-gps { position: absolute; inset: 0; display: grid; place-items: center; margin: 0; color: var(--muted); background: var(--raised); }
-.song-card { position: absolute; z-index: 500; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: oklch(0.17 0.012 55 / 0.92); border: 1px solid var(--line); max-width: min(360px, 80%); }
+.song-card { position: absolute; z-index: 500; left: 12px; bottom: 12px; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: oklch(0.17 0.036 258 / 0.92); border: 1px solid var(--line); max-width: min(360px, 80%); }
 .song-card div { display: grid; min-width: 0; } .song-card strong, .song-card span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .song-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .runner { position: relative; width: 18px; height: 18px; }
@@ -154,8 +154,8 @@
 
 /* ---------- planner ---------- */
 :root {
-  --k-easy: oklch(0.74 0.07 215); --k-strides: oklch(0.8 0.06 215); --k-long: var(--pace);
-  --k-tempo: var(--improve); --k-intervals: var(--hr); --k-race: oklch(0.96 0.02 85);
+  --k-easy: oklch(0.72 0.05 250); --k-strides: oklch(0.8 0.06 235); --k-long: oklch(0.82 0.14 160);
+  --k-tempo: var(--improve); --k-intervals: var(--hr); --k-race: oklch(0.97 0.02 235);
 }
 .kd-easy { --kc: var(--k-easy); } .kd-strides { --kc: var(--k-strides); } .kd-long { --kc: var(--k-long); }
 .kd-tempo { --kc: var(--k-tempo); } .kd-intervals { --kc: var(--k-intervals); } .kd-race { --kc: var(--k-race); }
@@ -185,7 +185,7 @@
 
 .plan-main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 32px; align-items: start; margin-top: 14px; }
 .plan-right { position: sticky; top: calc(var(--topbar) + 16px); display: grid; gap: 16px; }
-.workout-detail { padding: 18px; border: 1px solid var(--line-soft); border-radius: 12px; background: oklch(0.2 0.013 55 / 0.82); display: grid; gap: 10px; min-height: 140px; align-content: start; }
+.workout-detail { padding: 18px; border: 1px solid var(--line-soft); border-radius: 12px; background: oklch(0.2 0.039 258 / 0.82); display: grid; gap: 10px; min-height: 140px; align-content: start; }
 .wd-top { display: flex; align-items: center; gap: 10px; } .wd-top h2 { flex: 1; }
 .wd-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; margin: 4px 0; }
 .wd-stats div { display: flex; flex-direction: column-reverse; } .wd-stats dt { font: 500 0.68rem var(--mono); letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); } .wd-stats dd { margin: 0; }
@@ -235,3 +235,24 @@
 .song-text { display: grid; min-width: 0; } .song-text strong, .song-text .muted { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.95rem; } .song-text .muted { font-size: 0.82rem; }
 
 .estimate-note { padding: 10px 12px; border: 1px solid oklch(0.82 0.15 78 / 0.4); background: oklch(0.82 0.15 78 / 0.08); border-radius: 8px; color: var(--improve); font-size: 0.88rem; }
+
+/* ---------- race-time calculator ---------- */
+.calc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(28px, 4vw, 56px); align-items: start; }
+.calc-form { display: grid; gap: 24px; max-width: 560px; }
+.seg.wrap { flex-wrap: wrap; }
+.check { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; min-height: 44px; }
+.check input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--pace); cursor: pointer; }
+.input.small { width: 76px; text-align: center; padding: 0 8px; }
+.extras { display: grid; gap: 8px; }
+.extra-row { display: flex; align-items: center; gap: 8px; } .extra-row .input:first-child { flex: 1; min-width: 0; }
+.icon-btn { min-width: 40px; padding: 0; font-size: 1.2rem; }
+.quick-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.calc-out { display: grid; gap: 0; position: sticky; top: calc(var(--topbar) + 16px); }
+.calc-out > section { padding: 22px 0; border-top: 1px solid var(--line-soft); display: grid; gap: 8px; } .calc-out > section:first-child { border-top: 0; padding-top: 0; }
+.big-time { font-size: clamp(3rem, 7vw, 5rem); line-height: 1; letter-spacing: -0.03em; margin: 2px 0 6px; }
+.kvs { display: grid; gap: 4px; margin: 0; } .kv { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; }
+.result-num { font-size: 1.7rem; line-height: 1.15; } .result-num small { font-size: 0.5em; color: var(--muted); font-weight: 400; margin-left: 6px; }
+.conf-note { font-size: 0.9rem; } .c-solid { color: var(--good); } .c-stretch { color: var(--improve); } .c-guess { color: var(--doesnt); }
+.calc-out .btn { justify-self: start; }
+@media (max-width: 900px) { .calc-grid { grid-template-columns: 1fr; } .calc-out { position: static; } }
