@@ -74,6 +74,7 @@ def test_farthest_run_measured_from_home():
     runs = [route(str(i), f"2026-05-{i + 1:02d}", home) for i in range(4)] + [route("far", "2026-06-01", far, miles=10)]
     out = places.analyze(runs)
     assert out["farthest"]["run_id"] == "far"
+    assert places.haversine_m((out["farthest"]["lat"], out["farthest"]["lng"]), far[1]) < 50
     assert out["farthest"]["miles"] == pytest.approx(8000 / 1609.344, rel=0.15)
 
 

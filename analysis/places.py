@@ -65,10 +65,10 @@ def analyze(routes, size_m=250):
     # ---- farthest point from home
     far = None
     for r in routes:
-        d = max(haversine_m((home["lat"], home["lng"]), p) for p in r["pts"])
+        d, pt = max(((haversine_m((home["lat"], home["lng"]), p), p) for p in r["pts"]), key=lambda x: x[0])
         if far is None or d > far["_m"]:
-            far = {"_m": d, "run_id": r["id"], "date": r["date"]}
-    farthest = {"miles": far["_m"] / MI, "run_id": far["run_id"], "date": far["date"]}
+            far = {"_m": d, "run_id": r["id"], "date": r["date"], "pt": pt}
+    farthest = {"miles": far["_m"] / MI, "run_id": far["run_id"], "date": far["date"], "lat": far["pt"][0], "lng": far["pt"][1]}
 
     # ---- new ground: cumulative unique cells, and per month the share of visited cells that were new that month
     seen, cumulative = set(), []

@@ -12,7 +12,7 @@ const ROUTES = [
   { re: /^#\/runs$/, page: runs, nav: "runs", title: "Runs" },
   { re: /^#\/runs\/([^/]+)$/, page: run, nav: "runs", title: "Run" },
   { re: /^#\/plan$/, page: planner, nav: "plan", title: "Planner" },
-  { re: /^#\/analytics$/, page: analytics, nav: "analytics", title: "Analytics" },
+  { re: /^#\/analytics(?:\/(story|explore|places))?$/, page: analytics, nav: "analytics", title: "Analytics" },
 ];
 
 export const ctx = { meta: null, refresh: () => navigate() };
@@ -26,7 +26,7 @@ async function navigate() {
   view.replaceChildren();
   const hash = location.hash || "#/";
   const route = ROUTES.find((r) => r.re.test(hash)) || ROUTES[0];
-  const params = (hash.match(route.re) || []).slice(1).map(decodeURIComponent);
+  const params = (hash.match(route.re) || []).slice(1).map((p) => (p == null ? p : decodeURIComponent(p)));
   $$(".nav a").forEach((a) => (a.dataset.route === route.nav ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
   document.title = `${route.title} · Run Lab`;
   window.scrollTo(0, 0);
