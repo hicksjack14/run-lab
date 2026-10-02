@@ -59,3 +59,11 @@ After writing a dump, ALWAYS check every stream array has the same length (a mis
 - Before ANY UI work, invoke `frontend-design`, `ui-ux-pro-max`, and `impeccable` (Jack's global rule). Verify UI in the browser preview before calling it done.
 - Pace/zone/matching logic gets unit tests with hand-checked numbers. Prove it works before saying done.
 - Jack is a beginner coder: brief plain-English explanation after bug fixes; explain before big or hard-to-reverse changes.
+
+## Publishing the read-only snapshot (GitHub Pages)
+`python -m tools.export_static` runs the app's own API over a temp copy of the DB and writes a plain-file site to `docs/` (data in `docs/data/*.json`). The front end detects `<meta name="runlab-static">` (`web/js/lib/api.js`): GETs read files, writes are refused, Sync/plan editing are hidden, a "Snapshot" chip shows the export date, and "today"/countdowns use the browser's clock. GPS is trimmed 400 m at both ends of every route by default (`--no-trim` to disable); the real DB is never modified.
+- `./update.sh`: sync Strava, import Spotify if an export is present, export, commit `docs/`, push. Logs to `data/update.log`. Claude does not run the push.
+- `./install_daily_update.sh` (`--remove` to undo): launchd job running update.sh at 7:30 AM. Only Jack installs it.
+- Pages setup (Jack, once): repo must be public (free) or Pro; Settings > Pages > Deploy from branch `master`, folder `/docs`. Site: https://hicksjack14.github.io/run-lab/
+- The snapshot is public: it contains run stats, trimmed routes, and listening-derived findings. Never commit `data/`.
+- Preview locally: `python -m tools.export_static --demo --out .static-preview` then launch config "Run Lab (static snapshot)".

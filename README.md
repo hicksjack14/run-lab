@@ -10,3 +10,6 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 ```
 
 Personal data (GPS, heart rate, listening history) stays in `data/` and is gitignored.
+
+## Always-on read-only copy
+`./update.sh` refreshes your data and publishes a snapshot to GitHub Pages (`docs/`). `./install_daily_update.sh` does it every morning. See `CLAUDE.md` for setup.

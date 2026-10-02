@@ -15,3 +15,4 @@ data/strava-dumps/*
 !data/spotify-export/
 data/spotify-export/*
 !data/spotify-export/.gitkeep
+.static-preview/
