@@ -17,13 +17,16 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import db
-from ingest.strava_import import import_dump
+from ingest.strava_import import import_dump, local_to_utc
 
 ROOT = Path(__file__).resolve().parent.parent
 DEMO_DB = ROOT / "data" / "demo.db"
 REAL_DUMPS = ROOT / "data" / "strava-dumps"
 MI = 1609.344
 MAX_HR, REST_HR = 192, 58
+# fake catalogue: "Demo Artist 3" coincides with easier running, "Demo Artist 7" with harder (planted, so the music finding has something to find)
+ARTISTS = [f"Demo Artist {i}" for i in range(1, 11)]
+MUSIC_SHIFT = {"Demo Artist 3": -3.0, "Demo Artist 7": 3.0}
 
 
 def template_route():
@@ -92,6 +95,7 @@ def make_run(rid, day, start_hour, kind, dist_m, progress, prev_day_run, shoe, r
     t, covered, ar = 0.0, 0.0, 0.0
     hr_state = None
     samples = []
+    songs, song_end, artist = [], -1.0, None
     stop_left = 0
     step = 3
     while covered < dist_m:
@@ -112,7 +116,12 @@ def make_run(rid, day, start_hour, kind, dist_m, progress, prev_day_run, shoe, r
         ratio = v / thr_speed if moving else 0.0
         frac = 0.73 + 1.2 * (min(1.15, max(0.5, ratio)) - 0.85) if moving else 0.55
         frac += 0.06 * (minutes / 60) + (0.0 if minutes > 4 else -0.07 * (1 - minutes / 4))
-        target = REST_HR + (MAX_HR - REST_HR) * min(1.0, max(0.3, frac)) + efficiency_shift
+        if t >= song_end:
+            artist = rng.choice(ARTISTS)
+            n = rng.randint(1, 3)
+            songs.append({"start_s": t, "end_s": t + rng.randint(150, 260), "artist": artist, "track": f"Demo Song {ARTISTS.index(artist) + 1}-{n}", "uri": f"demo:{artist}:{n}"})
+            song_end = songs[-1]["end_s"]
+        target = REST_HR + (MAX_HR - REST_HR) * min(1.0, max(0.3, frac)) + efficiency_shift + MUSIC_SHIFT.get(artist, 0.0)
         hr_state = (REST_HR + 35) if hr_state is None else hr_state + (target - hr_state) * (step / 45)
         hr = hr_state + rng.gauss(0, 0.7)
         cad = 0 if not moving else max(70, 82 + 5.5 * (v - 2.6) - 0.6 * (shoe == "g_pegasus") + rng.gauss(0, 1.3))
@@ -158,6 +167,7 @@ def make_run(rid, day, start_hour, kind, dist_m, progress, prev_day_run, shoe, r
         "streams": {"time": times, "heart_rate": [round(h) for h in hrs], "velocity_smooth": [round(s[2], 3) for s in samples],
                     "cadence": [round(s[3]) for s in samples], "distance": dist, "moving": [s[5] for s in samples],
                     "location": [[round(s[6], 6), round(s[7], 6)] for s in samples], "altitude": [round(s[8], 1) for s in samples]},
+        "plays": songs,
         "performance": {"average_heartrate": sum(hrs) / len(hrs), "max_heartrate": round(max(hrs)), "laps": laps, "best_efforts": efforts},
     }
 
@@ -209,6 +219,13 @@ def build(path=DEMO_DB, seed=2026):
         prev = (d - timedelta(days=1)) in ran
         dump = make_run(31000000000 + i, d, hour, kind, miles * MI, progress, prev, shoe, rng, route_pts)
         import_dump(conn, dump)
+        base = datetime.strptime(local_to_utc(dump["activity"]["start_local"], "America/New_York"), "%Y-%m-%dT%H:%M:%SZ")
+        for song in dump["plays"]:
+            a, b = base + timedelta(seconds=song["start_s"]), base + timedelta(seconds=song["end_s"])
+            conn.execute("INSERT OR IGNORE INTO plays (start_utc, end_utc, ms_played, track, artist, album, spotify_uri) VALUES (?,?,?,?,?,?,?)",
+                         (a.strftime("%Y-%m-%dT%H:%M:%SZ"), b.strftime("%Y-%m-%dT%H:%M:%SZ"), int((song["end_s"] - song["start_s"]) * 1000),
+                          song["track"], song["artist"], "Demo Album", song["uri"]))
+        conn.commit()
     n = conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
     conn.close()
     return n

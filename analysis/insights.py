@@ -10,7 +10,7 @@ import statistics
 from collections import defaultdict
 from datetime import date, timedelta
 
-from analysis import fitness, zones
+from analysis import fitness, music_match, zones
 from analysis.zones import MI
 
 FT = 3.28084
@@ -411,6 +411,11 @@ def _regression_findings(runs, gear_names=None):
     return findings, unclear, n
 
 
+def _sort_findings(findings):
+    order = {"works": 0, "good": 1, "improve": 2, "doesnt": 3}
+    return sorted(findings, key=lambda f: (order[f["kind"]], {"high": 0, "medium": 1, "low": 2}[f["confidence"]]))
+
+
 def build_findings(runs, today, max_hr, gear_names=None):
     if len(runs) < MIN_RUNS_FOR_PATTERNS:
         return {"status": f"Not enough runs yet to find patterns ({len(runs)} so far, need {MIN_RUNS_FOR_PATTERNS}). "
@@ -419,8 +424,7 @@ def build_findings(runs, today, max_hr, gear_names=None):
                             _pacing(runs), _drift(runs), _cadence(runs)) if f]
     reg_findings, unclear, n_reg = _regression_findings(runs, gear_names or {})
     findings += reg_findings
-    order = {"works": 0, "good": 1, "improve": 2, "doesnt": 3}
-    findings.sort(key=lambda f: (order[f["kind"]], {"high": 0, "medium": 1, "low": 2}[f["confidence"]]))
+    findings = _sort_findings(findings)
     status = f"Based on {len(runs)} runs ({n_reg} long enough for the efficiency analysis)."
     return {"status": status, "findings": findings, "unclear": unclear}
 
@@ -524,4 +528,6 @@ def analyze(conn, today=None):
     if not runs:
         return {"summary": None, "series": None, "findings": [], "unclear": [], "status": "No runs yet.", "max_hr": max_hr}
     out = build_findings(runs, today, max_hr or 195, gear_names)
+    if conn.execute("SELECT COUNT(*) FROM plays").fetchone()[0]:
+        out["findings"] = _sort_findings(out["findings"] + music_match.music_findings(music_match.all_slices(conn)))
     return {"summary": _summary(runs, today), "series": _series(conn, runs, today, max_hr, gear_names), "max_hr": max_hr, **out}

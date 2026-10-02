@@ -146,3 +146,8 @@ def test_analytics_runs_carry_explorer_fields(client):
     run = client.get("/api/analytics").get_json()["series"]["runs"][0]
     for key in ("moving_s", "max_hr", "elev_ft", "zone_secs", "dominant", "start", "gear"):
         assert key in run
+
+
+def test_static_files_are_always_revalidated(client):
+    assert client.get("/js/main.js").headers["Cache-Control"] == "no-cache"
+    assert "Cache-Control" not in client.get("/api/meta").headers or client.get("/api/meta").headers["Cache-Control"] != "no-cache"

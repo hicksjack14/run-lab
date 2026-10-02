@@ -14,7 +14,7 @@ from pathlib import Path
 from flask import Flask, Response, abort, g, jsonify, request, send_from_directory
 
 import db
-from analysis import fitness, ics, insights, places, plans, zones
+from analysis import fitness, ics, insights, music_match, places, plans, zones
 from analysis.zones import MI
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -41,6 +41,13 @@ def create_app(db_path=None, today=None):
     get_today = today or date.today
     cache = {}
     sync_state = {"running": False, "imported": [], "error": None, "rate_limited": False, "finished": None}
+
+    @app.after_request
+    def always_revalidate_files(resp):
+        # this is a local dev-style app: make the browser re-check pages/scripts so an update shows up on the next reload
+        if not request.path.startswith("/api/"):
+            resp.headers["Cache-Control"] = "no-cache"
+        return resp
 
     def conn():
         if "conn" not in g:
@@ -104,6 +111,7 @@ def create_app(db_path=None, today=None):
         return jsonify({
             "run": {**dict(run), "id": run["strava_id"], "has_gps": bool(run["has_gps"]), "gear": gear.get(run["gear_id"])},
             "streams": streams, "laps": [dict(r) for r in laps], "best_efforts": [dict(r) for r in efforts],
+            "songs": music_match.songs_for_run(c, run_id),
             "zone_secs": zone_secs, "max_hr": snap["max_hr"], "hr_zones": snap["hr_zones"],
             "prev": prev_id[0] if prev_id else None, "next": next_id[0] if next_id else None,
         })

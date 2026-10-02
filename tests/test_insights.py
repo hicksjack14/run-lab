@@ -144,3 +144,13 @@ def test_engine_recovers_effects_planted_in_demo_data():
     assert out["summary"]["runs"] > 50
     assert len(out["series"]["weekly"]) > 20
     assert out["series"]["hours"] and len(out["series"]["hours"]) == 24
+
+
+@pytest.mark.skipif(not DEMO.exists(), reason="demo database not generated")
+def test_engine_recovers_planted_music_effect():
+    conn = db.connect(DEMO)
+    if not conn.execute("SELECT COUNT(*) FROM plays").fetchone()[0]:
+        pytest.skip("demo database has no plays (regenerate with python -m tools.make_demo_data)")
+    f = {x["id"]: x for x in insights.analyze(conn, TODAY)["findings"]}
+    assert "Demo Artist 3" in f["music-works"]["title"]       # planted: ~3 bpm easier
+    assert "Demo Artist 7" in f["music-doesnt"]["title"]      # planted: ~3 bpm harder

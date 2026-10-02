@@ -125,7 +125,20 @@ export async function render(view, [id], ctx) {
     h("section", {}, h("h2", { class: "label" }, "Splits"), splits),
     h("section", { class: "run-lower-side" }, zoneBlock(data), effortsBlock(data)));
 
-  view.replaceChildren(h("div", { class: "page run-page" }, head, mapWrap, transport, timeline, lower));
+  const seekTo = (t) => { st.tau = Math.max(model.t0, t); update(); window.scrollTo({ top: mapWrap.getBoundingClientRect().top + scrollY - 80, behavior: reducedMotion() ? "auto" : "smooth" }); };
+  const songsSection = model.songs.length ? h("section", { class: "songs-table-wrap", "aria-label": "Songs on this run" },
+    h("h2", { class: "label" }, "Songs on this run"),
+    h("table", { class: "mini-table songs-table" },
+      h("thead", {}, h("tr", {}, ["Song", "At", "Pace", "HR", "Cadence"].map((t) => h("th", {}, t)))),
+      h("tbody", {}, model.songs.map((sg) => h("tr", { class: "song-row" },
+        h("td", {}, h("button", { type: "button", class: "song-link", title: "Jump the replay to this song", onclick: () => seekTo(sg.start_s) },
+          h("span", { class: "song-dot", style: { background: songColor(sg.artist) } }), h("span", { class: "song-text" }, h("strong", {}, sg.track), h("span", { class: "muted" }, sg.artist || "")))),
+        h("td", { class: "mono" }, dur(sg.start_s - model.t0)),
+        h("td", { class: "pace-c" }, sg.avg_pace ? pace(sg.avg_pace) : "--"),
+        h("td", { class: "hr-c" }, sg.avg_hr ? String(Math.round(sg.avg_hr)) : "--"),
+        h("td", {}, sg.avg_cadence ? String(Math.round(sg.avg_cadence)) : "--")))))) : null;
+
+  view.replaceChildren(h("div", { class: "page run-page" }, head, mapWrap, transport, timeline, lower, songsSection));
 
   // songs lane (filled once the Spotify import exists)
   if (model.songs.length) {
