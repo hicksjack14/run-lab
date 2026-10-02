@@ -90,6 +90,7 @@ def make_run(rid, day, start_hour, kind, dist_m, progress, prev_day_run, shoe, r
     evening = start_hour >= 16
     efficiency_shift = (-3.0 if evening else 0.0) + (4.0 if prev_day_run else 0.0) + (2.5 if shoe == "g_pegasus" else 0.0)
     t, covered, ar = 0.0, 0.0, 0.0
+    hr_state = None
     samples = []
     stop_left = 0
     step = 3
@@ -111,7 +112,9 @@ def make_run(rid, day, start_hour, kind, dist_m, progress, prev_day_run, shoe, r
         ratio = v / thr_speed if moving else 0.0
         frac = 0.73 + 1.2 * (min(1.15, max(0.5, ratio)) - 0.85) if moving else 0.55
         frac += 0.06 * (minutes / 60) + (0.0 if minutes > 4 else -0.07 * (1 - minutes / 4))
-        hr = REST_HR + (MAX_HR - REST_HR) * min(1.0, max(0.3, frac)) + efficiency_shift + rng.gauss(0, 1.6)
+        target = REST_HR + (MAX_HR - REST_HR) * min(1.0, max(0.3, frac)) + efficiency_shift
+        hr_state = (REST_HR + 35) if hr_state is None else hr_state + (target - hr_state) * (step / 45)
+        hr = hr_state + rng.gauss(0, 0.7)
         cad = 0 if not moving else max(70, 82 + 5.5 * (v - 2.6) - 0.6 * (shoe == "g_pegasus") + rng.gauss(0, 1.3))
         lat, lng = route.at(covered)
         alt = 150 + 18 * math.sin(covered / 700) + 8 * math.sin(covered / 230)
@@ -142,8 +145,9 @@ def make_run(rid, day, start_hour, kind, dist_m, progress, prev_day_run, shoe, r
             if be:
                 efforts.append({"type_value": {"1k": "Fastest1k", "1 mile": "FastestMile", "5k": "Fastest5k", "10k": "Fastest10k"}[name], "value": int(be)})
     local = datetime(day.year, day.month, day.day, start_hour, rng.randint(0, 59), rng.randint(0, 59))
-    names = {"easy": ["Easy run", "Morning run", "Evening run", "Afternoon run", "Recovery jog"], "long": ["Long run", "Sunday long"],
-             "tempo": ["Tempo", "Threshold day"], "short": ["Quick one", "Shakeout"], "fast_easy": ["Evening run", "Lunch run"]}
+    part = "Morning" if start_hour < 11 else "Lunch" if start_hour < 15 else "Evening"
+    names = {"easy": [f"{part} run", f"{part} run", "Easy run", "Recovery jog"], "long": ["Long run", "Sunday long"],
+             "tempo": ["Tempo", "Threshold day"], "short": ["Quick one", "Shakeout"], "fast_easy": [f"{part} run"]}
     return {
         "activity": {"id": str(rid), "name": rng.choice(names[kind]), "sport_type": "Run", "start_local": local.isoformat(),
                      "gear_id": shoe, "timezone": "America/New_York",

@@ -26,6 +26,15 @@ RUN_FIELDS = ("strava_id AS id, name, start_local, start_utc, tz, distance_m, mo
               "avg_cadence_spm, elevation_gain_m, effort, gear_id, has_gps")
 
 
+def route_glyph(c, run_id, n=40):
+    """A thin sample of a run's GPS path, for drawing a small route thumbnail."""
+    rows = c.execute("SELECT lat, lng FROM run_streams WHERE strava_id = ? AND lat IS NOT NULL ORDER BY t_s", (run_id,)).fetchall()
+    if len(rows) < 8:
+        return None
+    step = max(1, len(rows) // n)
+    return [[r[0], r[1]] for r in rows[::step]]
+
+
 def create_app(db_path=None, today=None):
     app = Flask(__name__, static_folder=None)
     path = db.default_path() if db_path is None else db_path
@@ -230,7 +239,7 @@ def create_app(db_path=None, today=None):
                 coach = hit
                 break
         return jsonify({
-            "recent": [{**dict(r), "has_gps": bool(r["has_gps"])} for r in recent],
+            "recent": [{**dict(r), "has_gps": bool(r["has_gps"]), "glyph": route_glyph(c, r["id"])} for r in recent],
             "week": {"miles": weeks[-1]["miles"], "last_miles": weeks[-2]["miles"], "runs": runs_this_week, "start": monday.isoformat()},
             "plan": plan, "fitness": {k: snap[k] for k in ("vdot", "paces", "predictions", "prediction_text", "max_hr", "needs")},
             "coach": coach, "today": today.isoformat(),
