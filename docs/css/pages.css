@@ -256,3 +256,22 @@
 .conf-note { font-size: 0.9rem; } .c-solid { color: var(--good); } .c-stretch { color: var(--improve); } .c-guess { color: var(--doesnt); }
 .calc-out .btn { justify-self: start; }
 @media (max-width: 900px) { .calc-grid { grid-template-columns: 1fr; } .calc-out { position: static; } }
+
+/* ---------- home: main column, up next, guide, shoes ---------- */
+.home-main { display: grid; gap: 32px; min-width: 0; }
+.home-upnext > .label { margin-bottom: 12px; }
+.up-row { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto auto; align-items: center; gap: 4px 22px; padding: 10px 14px; min-height: 54px; border-radius: 10px; text-decoration: none; border: 1px solid transparent; transition: background 160ms var(--ease), border-color 160ms var(--ease); }
+.up-row:hover { background: oklch(0.21 0.042 258 / 0.9); border-color: var(--line-soft); }
+.up-date { display: grid; } .up-date .muted { font-size: 0.8rem; }
+.up-title { display: flex; align-items: center; gap: 10px; min-width: 0; } .up-title > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.up-pace { min-width: 128px; font-size: 0.95rem; }
+.home-guide { margin-top: 44px; padding-top: 28px; border-top: 1px solid var(--line-soft); }
+.guide-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 20px; margin-bottom: 16px; } .guide-head .link { margin-left: auto; }
+.shoe { display: grid; gap: 6px; } .shoe + .shoe { margin-top: 10px; }
+.shoe-top { display: flex; justify-content: space-between; gap: 12px; }
+.shoe-bar { height: 8px; background: var(--sunken); border-radius: 99px; overflow: hidden; } .shoe-bar > div { height: 100%; border-radius: 99px; background: var(--pace); }
+.shoe.st-close .shoe-bar > div { background: var(--improve); } .shoe.st-replace .shoe-bar > div { background: var(--doesnt); }
+@media (max-width: 720px) { .up-row { grid-template-columns: 62px minmax(0, 1fr) auto; } .up-pace { display: none; } }
+.home-extras { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px; margin-top: 36px; align-items: start; }
+.home-extras .side-block:first-child { border-top: 1px solid var(--line-soft); padding-top: 20px; }
+@media (max-width: 900px) { .home-extras { grid-template-columns: 1fr; gap: 0; } }
