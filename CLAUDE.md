@@ -14,6 +14,7 @@ cd ~/Desktop/Claude-Brain/claude-code/run-lab
 .venv/bin/python -m ingest.strava_api sync    # pull all new runs; re-run any time (--limit N to test)
 .venv/bin/python -m ingest.strava_import      # reload data/strava-dumps/*.json into SQLite
 .venv/bin/python -m ingest.spotify_import     # import the Spotify export dropped in data/spotify-export/
+.venv/bin/python -m ingest.spotify_live auth|poll|recent   # live Spotify capture (see below); `recent` shows latest saved plays
 ```
 
 ## Strava sync (direct API, preferred)
@@ -52,12 +53,19 @@ After writing a dump, ALWAYS check every stream array has the same length (a mis
 - Strava zones/5K predictions are unreliable estimates; compute zones from his own data.
 - Stream arrays are index-aligned; `time` is seconds from start; `moving=false` = watch paused (exclude from averages).
 - Treadmill runs have no `location`; map must hide gracefully.
+- Strava `best_efforts` use clock time (stops included) so they read low; gear ids need a `g` prefix for `/gear/{id}` (the connector strips it; `import_dump` normalizes). Never let cosmetic lookups (shoe names) crash a sync.
+- Python 3.14: use timezone-aware datetimes (`utcnow` is deprecated). `sqlite` timestamps: our ISO strings use `T`...`Z`, SQLite's `datetime()` uses a space, so don't compare them in SQL.
 
 ## Rules
 - Bind servers to `127.0.0.1`, never `0.0.0.0`.
 - Never commit anything under `data/`. This data has GPS + listening history; any public version excludes maps and exact times.
 - Before ANY UI work, invoke `frontend-design`, `ui-ux-pro-max`, and `impeccable` (Jack's global rule). Verify UI in the browser preview before calling it done.
 - Pace/zone/matching logic gets unit tests with hand-checked numbers. Prove it works before saying done.
+- Tests: `.venv/bin/python -m pytest -q` (~135, ~1s). Some insights/music tests assert patterns planted by `tools/make_demo_data.py` and skip if `data/demo.db` is missing: regenerate with `python -m tools.make_demo_data` after changing the generator.
+- No `innerHTML` in `web/` (a security hook blocks it, and run names come from Strava): build DOM with `h()`/`s()` from `web/js/lib/dom.js`.
+- After any `web/` or API change, run `python -m tools.export_static` so `docs/` matches before committing (`update.sh` does this daily). Restart the preview server after Python edits.
+- Preview configs (all port 5057, stop one before starting another): "Run Lab", "Run Lab (demo data)", "Run Lab (static snapshot)" in `Claude-Brain/.claude/launch.json`. Use the demo data to build/verify UI that needs many runs, then smoke-test the real DB (it surfaces things demo data hides).
+- Statistics: findings must state sample size + confidence and compare like with like (control effort/distance/drift); never oversell small-n patterns.
 - Jack is a beginner coder: brief plain-English explanation after bug fixes; explain before big or hard-to-reverse changes.
 
 ## Publishing the read-only snapshot (GitHub Pages)
@@ -70,3 +78,6 @@ After writing a dump, ALWAYS check every stream array has the same length (a mis
 
 ## Theme
 Deep navy + light blue (see `DESIGN.md`). Light blue = pace, coral = heart rate. Neutrals are navy-tinted oklch at hue ~258. Changing the palette means `web/css/base.css` tokens, the JS color ramps (`PACE_RAMP`/`TIME_RAMP`/`EFF_RAMP`), `web/js/lib/backdrop.js`, and `tools/make_icon.py` (then `python3 tools/make_icon.py`).
+
+## Live Spotify capture
+`ingest/spotify_live.py` polls Spotify's recently-played (last 50) with Authorization Code + PKCE (no secret). Setup (Jack): Spotify developer app (the owner needs **Premium**, a 2026 dev-mode rule), redirect URI exactly `http://127.0.0.1:5059/callback` (localhost is rejected; port 5060 is blocked by browsers), `SPOTIFY_CLIENT_ID` in `.env`, then `auth`. `./install_spotify_poll.sh` polls every 30 min (log `data/spotify-poll.log`); `update.sh` also polls. Plays get `source='live'`; importing the official export deletes live rows inside the export's period. `played_at` is ambiguous (start vs end): treated as end; flip with `spotify_live set-played-at start`. Start time = end minus song length, clipped to the previous song's end. Claude never runs `auth`.

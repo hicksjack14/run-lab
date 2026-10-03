@@ -7,6 +7,9 @@ mkdir -p data
 {
   echo "=== $(date) ==="
   .venv/bin/python -m ingest.strava_api sync || echo "Strava sync did not finish (not signed in yet, offline, or the rate limit). Continuing with what is already saved."
+  if [ -f data/spotify_token.json ]; then
+    .venv/bin/python -m ingest.spotify_live poll || echo "Spotify poll had a problem; continuing."
+  fi
   if find data/spotify-export -name '*.json' 2>/dev/null | grep -q .; then
     .venv/bin/python -m ingest.spotify_import || echo "Spotify import had a problem; continuing."
   fi

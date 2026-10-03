@@ -53,6 +53,7 @@ def import_dir(conn, directory=EXPORT_DIR):
         raise FileNotFoundError(f"No Spotify export folder at {directory}. Drop the unzipped export there first.")
     files = sorted(p for p in directory.rglob("*.json") if _is_history_file(p))
     added = short = other = 0
+    first_end = last_end = None            # the period the export covers
     for path in files:
         for entry in json.loads(path.read_text(encoding="utf-8")):
             norm = _normalise(entry)
@@ -64,9 +65,14 @@ def import_dir(conn, directory=EXPORT_DIR):
                 short += 1
                 continue
             start = end - timedelta(milliseconds=ms)
+            first_end = end if first_end is None or end < first_end else first_end
+            last_end = end if last_end is None or end > last_end else last_end
             cur = conn.execute("INSERT OR IGNORE INTO plays (start_utc, end_utc, ms_played, track, artist, album, spotify_uri) VALUES (?,?,?,?,?,?,?)",
                                (start.strftime(FMT), end.strftime(FMT), ms, track, artist, album, uri))
             added += cur.rowcount
+    if first_end is not None:
+        # Spotify's file is exact; plays polled live inside its period are replaced by it so nothing is counted twice
+        conn.execute("DELETE FROM plays WHERE source = 'live' AND end_utc >= ? AND end_utc <= ?", (first_end.strftime(FMT), last_end.strftime(FMT)))
     conn.commit()
     return {"files": len(files), "added": added, "skipped_short": short, "skipped_other": other}
 

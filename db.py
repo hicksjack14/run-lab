@@ -73,6 +73,7 @@ CREATE TABLE IF NOT EXISTS plays (
     artist      TEXT,
     album       TEXT,
     spotify_uri TEXT,
+    source      TEXT NOT NULL DEFAULT 'export',   -- 'export' (Spotify's file) or 'live' (polled from the API)
     UNIQUE (end_utc, spotify_uri)
 );
 
@@ -109,4 +110,13 @@ def connect(path=None):
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(SCHEMA)
+    _migrate(conn)
     return conn
+
+
+def _migrate(conn):
+    """Bring databases made by older versions up to date (existing plays came from the export)."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(plays)")}
+    if "source" not in cols:
+        conn.execute("ALTER TABLE plays ADD COLUMN source TEXT NOT NULL DEFAULT 'export'")
+        conn.commit()
