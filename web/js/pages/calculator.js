@@ -22,7 +22,7 @@ export async function render(view, ctx) {
   const st = { dist: "Half marathon", miles: DISTANCES["Half marathon"], mode: "pace", pace: null, time: null,
     routine: true, every: model.defaults.stop_every_mi, stopMin: model.defaults.stop_min, extras: [] };
   const usualPace = () => (hasUsual ? interp(model.curve, st.miles, "usual") : null);
-  st.pace = Math.round(usualPace() || 600);
+  st.pace = Math.round(model.defaults.pace_s || usualPace() || 600);
 
   // ---------- inputs ----------
   const out = h("div", { class: "calc-out", "aria-live": "polite" });

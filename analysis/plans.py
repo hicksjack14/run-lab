@@ -115,8 +115,15 @@ def _quality_kind(phase, build_index, goal_name, week_in_phase):
 
 
 def generate_plan(goal, race_date, start_date, current_weekly_mi, vdot_value, days_per_week=4,
-                  long_run_dow=6, goal_time_s=None):
-    """Build a plan. goal is "5K"/"10K"/"Half marathon"/"Marathon" or a distance in metres."""
+                  long_run_dow=6, goal_time_s=None, role="race", companion_pace_s=None,
+                  recovery_first=False, name=None):
+    """Build a plan. goal is "5K"/"10K"/"Half marathon"/"Marathon" or a distance in metres.
+
+    role="companion": the race is an easy run beside someone slower (at companion_pace_s sec/mi, default 14:30),
+      so there is no goal time, no hard race-pace work, and no "too ambitious" or "too few weeks" warnings.
+    recovery_first: week 1 is an easy recovery week (used when this plan follows another race).
+    name: shown instead of the distance name, e.g. "Thanksgiving 10K with Dad".
+    """
     if race_date <= start_date:
         raise ValueError("The race date must be after the start date.")
     days_per_week = max(3, min(6, days_per_week))
@@ -124,16 +131,23 @@ def generate_plan(goal, race_date, start_date, current_weekly_mi, vdot_value, da
     race_mi = race_m / MI
     paces = zones.training_paces(vdot_value)
     projected = zones.predict_time(vdot_value, race_m)
-    race_time = goal_time_s or projected
-    goal_pace = race_time / race_mi
+    plan_role = role   # the loop below reuses the name `role` for each day, so keep this one safe
+    companion = role == "companion"
+    if companion:
+        goal_pace = float(companion_pace_s or 870)
+        race_time = goal_pace * race_mi
+    else:
+        race_time = goal_time_s or projected
+        goal_pace = race_time / race_mi
+    display_name = name or goal_name
     warnings = []
 
     first_monday = _monday(start_date)
     n_weeks = (_monday(race_date) - first_monday).days // 7 + 1
-    if n_weeks < rules["min_weeks"]:
+    if n_weeks < rules["min_weeks"] and not companion:
         warnings.append(f"Only {n_weeks} weeks to the race; {rules['min_weeks']} or more is recommended for this "
                         "distance, so the build is compressed. Treat the goal time as less certain.")
-    if goal_time_s and goal_time_s < projected * 0.95:
+    if goal_time_s and not companion and goal_time_s < projected * 0.95:
         warnings.append(f"Your goal ({zones.fmt_time(goal_time_s)}) is more than 5% faster than your current fitness "
                         f"predicts ({zones.fmt_time(projected)}). Race-pace work uses the goal pace; easy and hard days "
                         "stay tied to your current fitness.")
@@ -145,6 +159,8 @@ def generate_plan(goal, race_date, start_date, current_weekly_mi, vdot_value, da
                         f"needs, so week 1 starts at {floor:.0f} mi. Consider fewer days per week if that feels like too much.")
 
     weekly = _weekly_plan(n_weeks, rules, start_mi)
+    if recovery_first and weekly:
+        weekly[0] = {**weekly[0], "target": weekly[0]["target"] * 0.6, "recovery": True}
     pattern = PATTERNS[days_per_week]
     shift = long_run_dow - 6
     workouts, week_rows = [], []
@@ -168,6 +184,8 @@ def generate_plan(goal, race_date, start_date, current_weekly_mi, vdot_value, da
         qkind = None
         if not wk["recovery"] and not is_race_week:
             qkind = _quality_kind(phase, build_counter, goal_name, in_phase)
+            if companion and qkind == "intervals":
+                qkind = "tempo"  # no speed work needed for an easy companion run
             if phase != "taper":
                 build_counter += 1
         if qkind is None:
@@ -211,9 +229,15 @@ def generate_plan(goal, race_date, start_date, current_weekly_mi, vdot_value, da
                     kind = "easy"
                 workouts.append(_workout(day, idx + 1, phase, kind, title, miles, paces["easy_fast"], paces["easy_slow"], (2, 2), desc))
 
-    workouts.append(_workout(race_date, n_weeks, "taper", "race", f"RACE DAY: {goal_name if goal_name != 'Race' else f'{race_mi:.1f} mi'}",
-                             race_mi, goal_pace, goal_pace, (3, 5),
-                             f"Goal {zones.fmt_time(race_time)} ({zones.fmt_pace(goal_pace)}/mi). Start a touch easier than goal pace for the first mile."))
+    if companion:
+        race_desc = (f"Easy run at {zones.fmt_pace(goal_pace)}/mi, side by side. Talk the whole way and enjoy it: "
+                     "this one is about the company. Finish around " + zones.fmt_time(race_time) + ".")
+        race_zones = (2, 2)
+    else:
+        race_desc = f"Goal {zones.fmt_time(race_time)} ({zones.fmt_pace(goal_pace)}/mi). Start a touch easier than goal pace for the first mile."
+        race_zones = (3, 5)
+    workouts.append(_workout(race_date, n_weeks, "taper", "race", f"RACE DAY: {name or (goal_name if goal_name != 'Race' else f'{race_mi:.1f} mi')}",
+                             race_mi, goal_pace, goal_pace, race_zones, race_desc))
     workouts.sort(key=lambda w: (w["date"], w["kind"] == "race"))
 
     for idx, wk in enumerate(weekly):
@@ -224,8 +248,8 @@ def generate_plan(goal, race_date, start_date, current_weekly_mi, vdot_value, da
             "planned_mi": round(sum(w["distance_mi"] for w in items), 1),
         })
     return {
-        "goal": goal_name, "race_date": race_date.isoformat(), "start_date": start_date.isoformat(),
+        "goal": display_name, "race_date": race_date.isoformat(), "start_date": start_date.isoformat(),
         "race_distance_m": race_m, "goal_time_s": race_time, "projected_time_s": projected,
-        "vdot": vdot_value, "days_per_week": days_per_week,
+        "vdot": vdot_value, "days_per_week": days_per_week, "role": plan_role,
         "weeks": week_rows, "workouts": workouts, "warnings": warnings,
     }

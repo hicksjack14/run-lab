@@ -141,9 +141,14 @@ class StravaClient:
                     yield a
             page += 1
 
-    def gear_name(self, gear_id):
+    def gear(self, gear_id):
+        """One shoe from Strava: its name, lifetime distance (metres, as Strava counts it) and whether it is retired."""
         g = self.get(f"/gear/{gear_id}")
-        return g.get("name") or " ".join(x for x in (g.get("brand_name"), g.get("model_name")) if x) or None
+        name = g.get("name") or " ".join(x for x in (g.get("brand_name"), g.get("model_name")) if x) or None
+        return {"name": name, "distance_m": g.get("distance"), "retired": bool(g.get("retired"))}
+
+    def gear_name(self, gear_id):
+        return self.gear(gear_id)["name"]
 
     def fetch_run(self, run_id):
         detail = self.get(f"/activities/{run_id}")
@@ -214,19 +219,25 @@ def sync(conn, client, dump_dir=DUMP_DIR, limit=None, log=print):
 
 
 def _fill_gear_names(conn, client):
-    """Look up a readable name for each shoe id we have not named yet (1 request each)."""
+    """Name each shoe and refresh its lifetime distance from Strava (1 request per shoe, every sync, so shoes re-tagged in Strava stay right)."""
     from analysis import fitness
-    names = fitness.get_settings(conn).get("gear_names", {})
+    settings = fitness.get_settings(conn)
+    names, info = settings.get("gear_names", {}), settings.get("gear_info", {})
     for (gid,) in conn.execute("SELECT DISTINCT gear_id FROM runs WHERE gear_id IS NOT NULL").fetchall():
-        if gid in names:
-            continue
+        if names.get(gid) == "":
+            continue                      # Strava never gave a name for this id: stop asking
         try:
-            names[gid] = client.gear_name(gid) or ""
+            g = client.gear(gid)
         except StravaError as e:
             if e.status not in (400, 404):
                 continue                  # a temporary problem: try again next sync
-            names[gid] = ""               # Strava will never give a name for this id; stop asking
+            names.setdefault(gid, "")
+            fitness.set_setting(conn, "gear_names", names)
+            continue
+        names[gid] = g["name"] or ""
+        info[gid] = {"distance_m": g["distance_m"], "retired": g["retired"]}
         fitness.set_setting(conn, "gear_names", names)
+        fitness.set_setting(conn, "gear_info", info)
 
 
 def run_auth(client):

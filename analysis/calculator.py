@@ -32,6 +32,7 @@ def _fit(xs, ys):
 def build(conn, today=None):
     today = today or date.today()
     snap = fitness.snapshot(conn, today)
+    mine = fitness.get_settings(conn).get("calc_defaults", {})        # his own starting pace and stop routine, if saved
     cutoff = (today - timedelta(days=RECENT_DAYS)).isoformat()
     rows = [r for r in conn.execute(
         "SELECT distance_m, moving_s, elapsed_s, avg_hr FROM runs WHERE distance_m >= 1600 AND moving_s >= 600 AND substr(start_local, 1, 10) >= ?", (cutoff,))]
@@ -77,4 +78,5 @@ def build(conn, today=None):
 
     return {"vdot": snap["vdot"], "vdot_is_estimate": snap["vdot_is_estimate"], "max_hr": snap["max_hr"], "longest_mi": longest,
             "usual": usual, "curve": curve, "stops": stops, "hr_at_pace": hr_at_pace,
-            "defaults": {"stop_every_mi": 3.0, "stop_min": 1.0}, "recent_runs": len(runs)}
+            "defaults": {"stop_every_mi": mine.get("stop_every_mi", 3.0), "stop_min": mine.get("stop_min", 1.0), "pace_s": mine.get("pace_s")},
+            "recent_runs": len(runs)}

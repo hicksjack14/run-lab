@@ -14,7 +14,7 @@ from pathlib import Path
 from flask import Flask, Response, abort, g, jsonify, request, send_from_directory
 
 import db
-from analysis import calculator, fitness, ics, insights, music_match, places, plans, zones
+from analysis import calculator, fitness, ics, insights, music_match, places, plans, shoes, zones
 from analysis.zones import MI
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -150,16 +150,63 @@ def create_app(db_path=None, today=None):
                     if not (100 <= v <= 240 if key == "max_hr" else 15 <= v <= 85):
                         return jsonify({"error": f"{key} is out of range"}), 400
                 fitness.set_setting(conn(), key, v)
+        if "shoes" in body:
+            mine = fitness.get_settings(conn()).get("shoes", {})
+            try:
+                for gid, vals in (body["shoes"] or {}).items():
+                    start, limit = float(vals.get("start_mi") or 0), float(vals.get("limit_mi") or shoes.DEFAULT_LIMIT_MI)
+                    if not (0 <= start <= 3000 and 50 <= limit <= 1500):
+                        return jsonify({"error": "Starting miles should be 0 to 3000 and the replace-at limit 50 to 1500."}), 400
+                    mine[str(gid)[:40]] = {"start_mi": start, "limit_mi": limit}
+            except (AttributeError, TypeError, ValueError):
+                return jsonify({"error": "Shoe settings need numbers."}), 400
+            fitness.set_setting(conn(), "shoes", mine)
         return get_fitness()
 
+    def shoe_summary():
+        c = conn()
+        rows = [dict(r) for r in c.execute("SELECT gear_id, COUNT(*) AS runs, SUM(distance_m) AS meters, MAX(substr(start_local, 1, 10)) AS last_day "
+                                           "FROM runs WHERE gear_id IS NOT NULL GROUP BY gear_id")]
+        none = c.execute("SELECT COUNT(*) AS runs, COALESCE(SUM(distance_m), 0) AS meters FROM runs WHERE gear_id IS NULL").fetchone()
+        return shoes.summarize(rows, dict(none), fitness.get_settings(c))
+
+    @app.get("/api/shoes")
+    def get_shoes():
+        return jsonify(shoe_summary())
+
     # ------------------------------------------------------------------ plans
+    def active_plan_rows():
+        """Every active plan, in race order. More than one means follow-up plans are chained after the first."""
+        return conn().execute("SELECT * FROM plans WHERE active = 1 ORDER BY race_date, id").fetchall()
+
     def active_plan_row():
-        return conn().execute("SELECT * FROM plans WHERE active = 1 ORDER BY id DESC LIMIT 1").fetchone()
+        """The plan he is on now: the next upcoming race in the chain, else the last one."""
+        rows = active_plan_rows()
+        if not rows:
+            return None
+        today_s = get_today().isoformat()
+        return next((r for r in rows if r["race_date"] >= today_s), rows[-1])
+
+    def merge_chain(rows):
+        """One combined weeks/workouts/warnings list for the chain; week numbers keep counting across plans."""
+        weeks, workouts, warnings, chain, offset = [], [], [], [], 0
+        for r in rows:
+            p = json.loads(r["payload"])
+            weeks += [{**wk, "week": wk["week"] + offset} for wk in p["weeks"]]
+            workouts += [{**w, "week": w["week"] + offset} for w in p["workouts"]]
+            prefix = f"{p['goal']}: " if len(rows) > 1 else ""
+            warnings += [prefix + x for x in p.get("warnings", [])]
+            chain.append({"id": r["id"], "goal": p["goal"], "race_date": p["race_date"], "role": p.get("role", "race"),
+                          "race_distance_m": p["race_distance_m"], "goal_time_s": p["goal_time_s"]})
+            offset += len(p["weeks"])
+        workouts.sort(key=lambda w: (w["date"], w["kind"] == "race"))
+        return weeks, workouts, warnings, chain
 
     def plan_response(row):
         payload = json.loads(row["payload"])
+        weeks, all_workouts, warnings, chain = merge_chain(active_plan_rows())
         today = get_today()
-        workouts = fitness.adherence(conn(), payload["workouts"], today)
+        workouts = fitness.adherence(conn(), all_workouts, today)
         past = [w for w in workouts if w["status"] in ("done", "partial", "missed")]
         stats = {
             "done": sum(1 for w in workouts if w["status"] == "done"),
@@ -173,7 +220,8 @@ def create_app(db_path=None, today=None):
         nxt = next((w for w in workouts if w["status"] in ("upcoming", "today")), None)
         # goal_time_s comes from the payload: it is the time actually planned for (his goal, or the projection if he gave none)
         return {"plan": {**{k: row[k] for k in ("id", "created_at", "goal", "race_date", "start_date", "days_per_week", "long_run_dow")},
-                         **{k: payload[k] for k in ("weeks", "warnings", "vdot", "projected_time_s", "race_distance_m", "goal_time_s")}},
+                         **{k: payload[k] for k in ("vdot", "projected_time_s", "race_distance_m", "goal_time_s")},
+                         "weeks": weeks, "warnings": warnings, "chain": chain, "role": payload.get("role", "race")},
                 "workouts": workouts, "stats": stats, "next": nxt,
                 "days_to_race": (date.fromisoformat(row["race_date"]) - today).days}
 
@@ -193,21 +241,45 @@ def create_app(db_path=None, today=None):
             days = int(body.get("days_per_week", 4))
             long_dow = int(body.get("long_run_dow", 6))
             goal_time = float(body["goal_time_s"]) if body.get("goal_time_s") else None
+            companion_pace = float(body["companion_pace_s"]) if body.get("companion_pace_s") else None
+            weekly_mi = float(body["weekly_mi"]) if body.get("weekly_mi") else None
         except (KeyError, TypeError, ValueError):
             return jsonify({"error": "Need a goal (5K, 10K, Half marathon, Marathon), a race date, and valid numbers."}), 400
         if long_dow not in (5, 6):
             return jsonify({"error": "The long run can be on Saturday or Sunday."}), 400
+        role = body.get("role", "race")
+        if role not in ("race", "companion"):
+            return jsonify({"error": "role must be race or companion."}), 400
+        if companion_pace is not None and not 360 <= companion_pace <= 1500:
+            return jsonify({"error": "The companion pace should be between 6:00 and 25:00 per mile."}), 400
+        if weekly_mi is not None and not 3 <= weekly_mi <= 80:
+            return jsonify({"error": "Starting weekly miles should be between 3 and 80."}), 400
+        name = str(body["name"]).strip()[:60] if body.get("name") else None
+        follow_up = bool(body.get("follow_up"))
+        if follow_up:
+            chain_rows = active_plan_rows()
+            if not chain_rows:
+                return jsonify({"error": "There is no plan to follow yet. Build your first plan, then add a follow-up."}), 400
+            prev_race = date.fromisoformat(chain_rows[-1]["race_date"])
+            if race_date <= prev_race:
+                return jsonify({"error": "A follow-up race has to come after your current race."}), 400
+            if not body.get("start_date"):
+                start = prev_race + timedelta(days=1)
+            elif start <= prev_race:
+                return jsonify({"error": "A follow-up plan has to start after your current race."}), 400
         snap = fitness.snapshot(conn(), get_today())
         vdot = float(body["vdot"]) if body.get("vdot") else snap["vdot"]
         if not vdot:
             return jsonify({"error": "Not enough data to set paces yet.", "needs": snap["needs"]}), 422
         try:
-            plan = plans.generate_plan(goal, race_date, start, snap["recent_weekly_mi"], vdot, days_per_week=days,
-                                       long_run_dow=long_dow, goal_time_s=goal_time)
+            plan = plans.generate_plan(goal, race_date, start, weekly_mi if weekly_mi is not None else snap["recent_weekly_mi"], vdot, days_per_week=days,
+                                       long_run_dow=long_dow, goal_time_s=goal_time, role=role,
+                                       companion_pace_s=companion_pace, recovery_first=follow_up, name=name)
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
         c = conn()
-        c.execute("UPDATE plans SET active = 0")
+        if not follow_up:
+            c.execute("UPDATE plans SET active = 0")
         c.execute("INSERT INTO plans (created_at, active, goal, race_date, goal_time_s, start_date, days_per_week, long_run_dow, payload)"
                   " VALUES (?,?,?,?,?,?,?,?,?)",
                   (datetime.now(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds") + "Z", 1, plan["goal"], plan["race_date"],
@@ -217,6 +289,11 @@ def create_app(db_path=None, today=None):
 
     @app.delete("/api/plan")
     def delete_plan():
+        rows = active_plan_rows()
+        if request.args.get("last") and len(rows) > 1:   # remove only the latest follow-up plan
+            conn().execute("UPDATE plans SET active = 0 WHERE id = ?", (rows[-1]["id"],))
+            conn().commit()
+            return jsonify(plan_response(active_plan_row()))
         conn().execute("UPDATE plans SET active = 0")
         conn().commit()
         return jsonify({"plan": None})
@@ -229,8 +306,10 @@ def create_app(db_path=None, today=None):
         time = request.args.get("time", "17:00")
         if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", time):
             return jsonify({"error": "time must look like 17:00"}), 400
-        payload = json.loads(row["payload"])
-        text = ics.to_ics(payload["workouts"], f"Run Lab: {row['goal']} {row['race_date']}", plan_id=f"rl{row['id']}", start_time=time)
+        rows = active_plan_rows()
+        _weeks, all_workouts, _warn, chain = merge_chain(rows)
+        cal_name = "Run Lab: " + " then ".join(f"{c['goal']} {c['race_date']}" for c in chain)
+        text = ics.to_ics(all_workouts, cal_name, plan_id=f"rl{rows[0]['id']}", start_time=time)
         name = f"run-lab-{row['goal'].lower().replace(' ', '-')}-{row['race_date']}.ics"
         return Response(text, mimetype="text/calendar", headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
@@ -278,7 +357,7 @@ def create_app(db_path=None, today=None):
             "recent": [{**dict(r), "has_gps": bool(r["has_gps"]), "glyph": route_glyph(c, r["id"])} for r in recent],
             "week": {"miles": weeks[-1]["miles"], "last_miles": weeks[-2]["miles"], "runs": runs_this_week, "start": monday.isoformat()},
             "plan": plan, "fitness": {k: snap[k] for k in ("vdot", "vdot_source", "vdot_is_estimate", "paces", "predictions", "prediction_text", "max_hr", "needs")},
-            "coach": coach, "today": today.isoformat(),
+            "coach": coach, "shoes": shoe_summary(), "today": today.isoformat(),
         })
 
     # ------------------------------------------------------------------ strava sync (background thread)

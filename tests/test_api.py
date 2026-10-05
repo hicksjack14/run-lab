@@ -159,3 +159,28 @@ def test_race_result_sets_fitness_and_is_validated(client):
     assert client.post("/api/settings", json={"race_result": {"distance_m": 5000, "seconds": 300}}).status_code == 400   # a 5-minute 5K
     assert client.post("/api/settings", json={"race_result": {"distance_m": "far", "seconds": 1620}}).status_code == 400
     assert client.post("/api/settings", json={"race_result": None}).get_json()["vdot_source"] == "data"
+
+
+@pytest.fixture
+def shoe_client(tmp_path):
+    from analysis.zones import MI
+    path = tmp_path / "s.db"
+    conn = db.connect(path)
+    add_run(conn, "1", "2026-09-29", gear="g1")
+    fitness.set_setting(conn, "gear_names", {"g1": "Test Shoe"})
+    fitness.set_setting(conn, "gear_info", {"g1": {"distance_m": 250 * MI, "retired": False}})
+    conn.close()
+    return create_app(path, today=lambda: TODAY).test_client()
+
+
+def test_shoes_use_strava_totals_and_own_limits(shoe_client):
+    shoe = shoe_client.get("/api/shoes").get_json()["shoes"][0]
+    assert shoe["name"] == "Test Shoe" and shoe["miles"] == 250.0 and shoe["limit_mi"] == 400 and shoe["status"] == "ok"
+    shoe_client.post("/api/settings", json={"shoes": {"g1": {"start_mi": 10, "limit_mi": 300}}})
+    shoe = shoe_client.get("/api/home").get_json()["shoes"]["shoes"][0]
+    assert shoe["miles"] == 260.0 and shoe["limit_mi"] == 300 and shoe["status"] == "close"
+
+
+def test_shoe_settings_reject_junk(shoe_client):
+    assert shoe_client.post("/api/settings", json={"shoes": {"g1": {"start_mi": "abc"}}}).status_code == 400
+    assert shoe_client.post("/api/settings", json={"shoes": {"g1": {"limit_mi": 5}}}).status_code == 400

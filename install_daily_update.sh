@@ -1,6 +1,6 @@
 #!/bin/bash
-# Make your Mac run ./update.sh every morning so the published site stays fresh without you doing anything.
-#   ./install_daily_update.sh            turn it on (7:30 AM daily; if the Mac was asleep it runs when it wakes)
+# Make your Mac run ./update.sh by itself so the published site stays fresh without you doing anything.
+#   ./install_daily_update.sh            turn it on (every hour; a new run is on the site within about an hour of the Mac being awake)
 #   ./install_daily_update.sh --remove   turn it off
 # Output goes to data/update.log. It needs: Strava set up (.env + auth), and `git push` working without a password prompt.
 set -e
@@ -10,7 +10,7 @@ PLIST="$HOME/Library/LaunchAgents/com.runlab.update.plist"
 if [ "$1" = "--remove" ]; then
   launchctl unload "$PLIST" 2>/dev/null || true
   rm -f "$PLIST"
-  echo "Daily update turned off."
+  echo "Auto-update turned off."
   exit 0
 fi
 mkdir -p "$HOME/Library/LaunchAgents"
@@ -20,11 +20,12 @@ cat > "$PLIST" <<EOF
 <plist version="1.0"><dict>
   <key>Label</key><string>com.runlab.update</string>
   <key>ProgramArguments</key><array><string>/bin/bash</string><string>$REPO/update.sh</string></array>
-  <key>StartCalendarInterval</key><dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>30</integer></dict>
+  <key>StartInterval</key><integer>3600</integer>
+  <key>RunAtLoad</key><true/>
   <key>StandardErrorPath</key><string>$REPO/data/update.log</string>
   <key>StandardOutPath</key><string>$REPO/data/update.log</string>
 </dict></plist>
 EOF
 launchctl unload "$PLIST" 2>/dev/null || true
 launchctl load "$PLIST"
-echo "Daily update is on (7:30 AM). Check data/update.log to see how it went. Turn it off with: ./install_daily_update.sh --remove"
+echo "Auto-update is on (every hour). Check data/update.log to see how it went. Turn it off with: ./install_daily_update.sh --remove"

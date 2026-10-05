@@ -53,7 +53,7 @@ def test_confidence_drops_beyond_the_longest_run(conn):
 def test_observed_stopping_habit(conn):
     m = calculator.build(conn, TODAY)
     assert m["stops"]["observed_min_per_mile"] == pytest.approx(1.0, abs=0.05)
-    assert m["defaults"] == {"stop_every_mi": 3.0, "stop_min": 1.0}
+    assert m["defaults"]["stop_every_mi"] == 3.0 and m["defaults"]["stop_min"] == 1.0
 
 
 def test_heart_rate_at_pace_is_learned_from_runs(conn):
@@ -90,3 +90,9 @@ def test_empty_database(tmp_path):
     m = calculator.build(db.connect(tmp_path / "t.db"), TODAY)
     assert m["usual"] is None and m["vdot"] is None and m["longest_mi"] == 0
     assert m["curve"] and m["stops"] is None and m["hr_at_pace"] is None
+
+
+def test_defaults_come_from_saved_settings_else_the_built_ins(conn):
+    assert calculator.build(conn, TODAY)["defaults"] == {"stop_every_mi": 3.0, "stop_min": 1.0, "pace_s": None}
+    fitness.set_setting(conn, "calc_defaults", {"pace_s": 587, "stop_every_mi": 3.1, "stop_min": 1.25})
+    assert calculator.build(conn, TODAY)["defaults"] == {"stop_every_mi": 3.1, "stop_min": 1.25, "pace_s": 587}
