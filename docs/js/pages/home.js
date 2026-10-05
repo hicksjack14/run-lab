@@ -151,7 +151,7 @@ function shoesBlock(sh) {
     } catch (ex) { toast(ex.message); }
   };
   return h("section", { class: "side-block", "aria-label": "Shoes" }, h("h2", { class: "label" }, "Shoe mileage"), shoes.map(row),
-    sh.untagged && sh.untagged.runs ? h("p", { class: "hint" }, `${sh.untagged.runs} older runs (${Math.round(sh.untagged.miles)} mi) have no shoe set in Strava, so they are not counted.`) : null,
+    sh.untagged && sh.untagged.runs && !sh.untagged.covered ? h("p", { class: "hint" }, `${sh.untagged.runs} older runs (${Math.round(sh.untagged.miles)} mi) have no shoe set in Strava, so they are not counted.`) : null,
     isStatic ? null : h("details", { class: "overrides" }, h("summary", {}, "Adjust miles or limit"),
       h("form", { onsubmit: save }, shoes.map((s) => h("div", { class: "form-row" }, field(s, "start_mi", `${s.name}: starting miles`, s.start_mi), field(s, "limit_mi", "Replace at (mi)", s.limit_mi))),
         h("button", { class: "btn btn-quiet", type: "submit" }, "Save"))));
