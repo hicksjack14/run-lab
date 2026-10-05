@@ -74,7 +74,7 @@ def export(source_db, out_dir=DEFAULT_OUT, trim_m=DEFAULT_TRIM_M, today=None):
                     exported_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"), trimmed_m=trim_m)
         data = out_dir / "data"
         _write_json(data / "meta.json", meta)
-        for name in ("runs", "home", "fitness", "plan", "analytics", "places", "calc"):
+        for name in ("runs", "home", "fitness", "plan", "races", "analytics", "places", "calc"):
             _write_json(data / f"{name}.json", client.get(f"/api/{name}").get_json())
         runs = client.get("/api/runs").get_json()
         for r in runs:

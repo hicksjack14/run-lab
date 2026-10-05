@@ -183,3 +183,20 @@ def test_starting_weekly_miles_can_be_set_for_the_follow_up(env):
     assert high[-5]["planned_mi"] > low[-5]["planned_mi"]       # a build week in the follow-up block
     assert client.post("/api/plan", json={**FOLLOW, "weekly_mi": 2}).status_code == 400
     assert client.post("/api/plan", json={**FOLLOW, "weekly_mi": 200}).status_code == 400
+
+
+def test_each_race_knows_its_slice_of_the_plan(env):
+    client, _ = env
+    body = build_chain(client).get_json()
+    chain, workouts, weeks = body["plan"]["chain"], body["workouts"], body["plan"]["weeks"]
+    half, ten_k = chain
+    assert half["week_from"] == 1 and ten_k["week_from"] == half["week_to"] + 1
+    assert ten_k["week_to"] == len(weeks)
+    assert half["start_date"] == "2026-10-02" and ten_k["start_date"] == "2026-10-19"
+    assert ten_k["days_per_week"] == 4 and isinstance(ten_k["warnings"], list)
+    for c in chain:
+        mine = [w for w in workouts if w["plan_id"] == c["id"]]
+        assert mine and sum(1 for w in mine if w["kind"] == "race") == 1
+        assert all(c["week_from"] <= w["week"] <= c["week_to"] for w in mine)
+        assert [w for w in mine if w["kind"] == "race"][0]["date"] == c["race_date"]
+    assert {w["plan_id"] for w in workouts} == {c["id"] for c in chain}

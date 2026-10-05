@@ -74,7 +74,28 @@ CREATE TABLE IF NOT EXISTS plays (
     album       TEXT,
     spotify_uri TEXT,
     source      TEXT NOT NULL DEFAULT 'export',   -- 'export' (Spotify's file) or 'live' (polled from the API)
+    album_id    TEXT,      -- live plays only: lets us tell when a whole album has been played
+    album_type  TEXT,      -- 'album' | 'single' | 'compilation'
+    total_tracks INTEGER,  -- tracks on the whole album
+    track_number INTEGER,
+    disc_number INTEGER,
+    duration_ms INTEGER,   -- full length of the track (ms_played is how much of it we heard)
     UNIQUE (end_utc, spotify_uri)
+);
+
+CREATE TABLE IF NOT EXISTS album_finishes (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    album_id     TEXT NOT NULL,        -- Spotify album id (also the id Crates uses)
+    album        TEXT,
+    artist       TEXT,
+    total_tracks INTEGER,
+    finished_at  TEXT NOT NULL,        -- UTC: when the last missing track finished
+    listened_on  TEXT NOT NULL,        -- the local calendar date of that moment (YYYY-MM-DD)
+    synced_at    TEXT,                 -- set once Crates has accepted it
+    crates_status TEXT,                -- what Crates said: logged | listened_again | already
+    attempts     INTEGER NOT NULL DEFAULT 0,   -- refused-by-Crates tries (network trouble is not counted)
+    last_error   TEXT,
+    UNIQUE (album_id, listened_on)
 );
 
 CREATE TABLE IF NOT EXISTS settings (
@@ -93,6 +114,19 @@ CREATE TABLE IF NOT EXISTS plans (
     days_per_week INTEGER NOT NULL,
     long_run_dow  INTEGER NOT NULL,
     payload       TEXT NOT NULL    -- JSON: weeks, workouts, warnings, vdot used
+);
+
+CREATE TABLE IF NOT EXISTS race_log (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    race_date   TEXT NOT NULL,         -- YYYY-MM-DD
+    name        TEXT NOT NULL,
+    distance_m  REAL NOT NULL,
+    time_s      REAL,                  -- official (net) finish time; optional
+    run_id      TEXT,                  -- the Strava run for it, when we can match one
+    event       TEXT,                  -- which goal race this was (analysis/goal_races.py key), e.g. 'nyc-half'
+    nyrr        INTEGER NOT NULL DEFAULT 0,   -- 1 = an NYRR race (counts toward 4-of-6 / 9+1)
+    notes       TEXT,
+    created_at  TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_runs_start_utc ON runs(start_utc);
@@ -120,3 +154,8 @@ def _migrate(conn):
     if "source" not in cols:
         conn.execute("ALTER TABLE plays ADD COLUMN source TEXT NOT NULL DEFAULT 'export'")
         conn.commit()
+    for name, kind in (("album_id", "TEXT"), ("album_type", "TEXT"), ("total_tracks", "INTEGER"),
+                       ("track_number", "INTEGER"), ("disc_number", "INTEGER"), ("duration_ms", "INTEGER")):
+        if name not in cols:
+            conn.execute(f"ALTER TABLE plays ADD COLUMN {name} {kind}")
+    conn.commit()

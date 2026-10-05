@@ -141,8 +141,17 @@ def poll(conn, client):
         if ms < MIN_PLAY_MS:
             continue
         artists = t.get("artists") or [{}]
-        added += conn.execute("INSERT OR IGNORE INTO plays (start_utc, end_utc, ms_played, track, artist, album, spotify_uri, source) VALUES (?,?,?,?,?,?,?, 'live')",
-                              (start.strftime(FMT), end.strftime(FMT), ms, t["name"], artists[0].get("name"), (t.get("album") or {}).get("name"), t.get("uri"))).rowcount
+        album = t.get("album") or {}
+        # album details let analysis/albums.py tell when a whole album has been played
+        details = (album.get("id"), album.get("album_type"), album.get("total_tracks"), t.get("track_number"), t.get("disc_number"), t.get("duration_ms"))
+        inserted = conn.execute("INSERT OR IGNORE INTO plays (start_utc, end_utc, ms_played, track, artist, album, spotify_uri, source,"
+                                " album_id, album_type, total_tracks, track_number, disc_number, duration_ms) VALUES (?,?,?,?,?,?,?, 'live', ?,?,?,?,?,?)",
+                                (start.strftime(FMT), end.strftime(FMT), ms, t["name"], artists[0].get("name"), album.get("name"), t.get("uri"), *details)).rowcount
+        added += inserted
+        if not inserted:     # saved by an earlier poll, before we kept these details: fill them in
+            conn.execute("UPDATE plays SET album_id=?, album_type=?, total_tracks=?, track_number=?, disc_number=?, duration_ms=?"
+                         " WHERE end_utc=? AND spotify_uri=? AND source='live' AND album_id IS NULL",
+                         (*details, end.strftime(FMT), t.get("uri")))
     conn.commit()
     return {"added": added, "rate_limited": False}
 
@@ -194,8 +203,17 @@ if __name__ == "__main__":
     if cmd == "auth":
         run_auth(spotify)
     else:
+        conn = db.connect()
         try:
-            res = poll(db.connect(), spotify)
+            res = poll(conn, spotify)
         except SpotifyRefused as e:
             sys.exit(str(e))
         print(f"Saved {res['added']} new play(s)." + (" Hit Spotify's rate limit; will retry next time." if res["rate_limited"] else ""))
+        try:                                 # tell Crates about albums played all the way through; never let this break the poll
+            from ingest import crates_sync
+            albums_res = crates_sync.run(conn)
+            if albums_res["new"] or albums_res["sent"] or albums_res["retry_later"] or albums_res["refused"]:
+                print(f"Albums: {albums_res['new']} new finish(es), {albums_res['sent']} sent to Crates, "
+                      f"{albums_res['retry_later']} to retry, {albums_res['refused']} refused.")
+        except (Exception, SystemExit) as e:
+            print(f"Album sync skipped: {e}")

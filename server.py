@@ -14,7 +14,7 @@ from pathlib import Path
 from flask import Flask, Response, abort, g, jsonify, request, send_from_directory
 
 import db
-from analysis import calculator, fitness, ics, insights, music_match, places, plans, shoes, zones
+from analysis import calculator, fitness, goal_races, ics, insights, music_match, places, plans, shoes, zones
 from analysis.zones import MI
 
 WEB_DIR = Path(__file__).parent / "web"
@@ -193,11 +193,15 @@ def create_app(db_path=None, today=None):
         for r in rows:
             p = json.loads(r["payload"])
             weeks += [{**wk, "week": wk["week"] + offset} for wk in p["weeks"]]
-            workouts += [{**w, "week": w["week"] + offset} for w in p["workouts"]]
+            workouts += [{**w, "week": w["week"] + offset, "plan_id": r["id"]} for w in p["workouts"]]
             prefix = f"{p['goal']}: " if len(rows) > 1 else ""
             warnings += [prefix + x for x in p.get("warnings", [])]
+            # everything the Races page needs to describe one race and its slice of the plan
             chain.append({"id": r["id"], "goal": p["goal"], "race_date": p["race_date"], "role": p.get("role", "race"),
-                          "race_distance_m": p["race_distance_m"], "goal_time_s": p["goal_time_s"]})
+                          "race_distance_m": p["race_distance_m"], "goal_time_s": p["goal_time_s"],
+                          "projected_time_s": p.get("projected_time_s"), "start_date": p["start_date"],
+                          "days_per_week": p["days_per_week"], "week_from": offset + 1, "week_to": offset + len(p["weeks"]),
+                          "warnings": p.get("warnings", [])})
             offset += len(p["weeks"])
         workouts.sort(key=lambda w: (w["date"], w["kind"] == "race"))
         return weeks, workouts, warnings, chain
@@ -312,6 +316,80 @@ def create_app(db_path=None, today=None):
         text = ics.to_ics(all_workouts, cal_name, plan_id=f"rl{rows[0]['id']}", start_time=time)
         name = f"run-lab-{row['goal'].lower().replace(' ', '-')}-{row['race_date']}.ics"
         return Response(text, mimetype="text/calendar", headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    # ------------------------------------------------------------------ races: the log of races he has run + the goal races
+    def run_on(day, target_m):
+        """The run on that date closest to the race distance (within 15%), if any."""
+        rows = conn().execute("SELECT strava_id, distance_m, moving_s FROM runs WHERE substr(start_local, 1, 10) = ?", (day,)).fetchall()
+        close = [r for r in rows if r["distance_m"] and abs(r["distance_m"] - target_m) / target_m <= 0.15]
+        return min(close, key=lambda r: abs(r["distance_m"] - target_m)) if close else None
+
+    def races_response():
+        today = get_today()
+        manual = [{**dict(r), "nyrr": bool(r["nyrr"]), "source": "manual"}
+                  for r in conn().execute("SELECT * FROM race_log ORDER BY race_date DESC, id DESC")]
+        # races from his training plan that are already behind him fill the log in by themselves
+        derived = []
+        for r in active_plan_rows():
+            if r["race_date"] >= today.isoformat() or any(m["race_date"] == r["race_date"] for m in manual):
+                continue
+            p = json.loads(r["payload"])
+            run = run_on(r["race_date"], p["race_distance_m"])
+            derived.append({"id": f"plan-{r['id']}", "source": "plan", "race_date": r["race_date"], "name": p["goal"],
+                            "distance_m": p["race_distance_m"], "time_s": run["moving_s"] if run else None,
+                            "run_id": run["strava_id"] if run else None, "event": None, "nyrr": False, "notes": "From your training plan."})
+        log = sorted(manual + derived, key=lambda e: e["race_date"], reverse=True)
+        snap = fitness.snapshot(conn(), today)
+        predictions = snap["predictions"]
+        return {"division": goal_races.DIVISION, "verified": goal_races.VERIFIED, "today": today.isoformat(), "log": log,
+                "fitness_is_estimate": bool(snap["vdot_is_estimate"]),
+                "goals": goal_races.goals_with_status(log, predictions, today)}
+
+    @app.get("/api/races")
+    def get_races():
+        return jsonify(races_response())
+
+    @app.post("/api/races")
+    def add_race():
+        body = request.get_json(force=True) or {}
+        try:
+            name = str(body["name"]).strip()[:80]
+            race_date = date.fromisoformat(body["race_date"])
+            distance_m = float(body["distance_m"])
+            time_s = float(body["time_s"]) if body.get("time_s") not in (None, "") else None
+        except (KeyError, TypeError, ValueError):
+            return jsonify({"error": "Need a race name, a date and a distance."}), 400
+        if not name:
+            return jsonify({"error": "Give the race a name."}), 400
+        if not date(1990, 1, 1) <= race_date <= get_today():
+            return jsonify({"error": "The date must be today or earlier. Upcoming races belong in the Planner."}), 400
+        if not 800 <= distance_m <= 200_000:
+            return jsonify({"error": "That distance looks off."}), 400
+        if time_s is not None and not (60 <= time_s <= 1_000_000 and 180 <= time_s / (distance_m / MI) <= 1800):
+            return jsonify({"error": "That finish time doesn't fit the distance. Check it (hours:minutes:seconds)."}), 400
+        event = body.get("event") or None
+        if event is not None and event not in goal_races.GOAL_KEYS:
+            return jsonify({"error": "Unknown goal race."}), 400
+        run_id = body.get("run_id") or None
+        if run_id and not conn().execute("SELECT 1 FROM runs WHERE strava_id = ?", (str(run_id),)).fetchone():
+            run_id = None
+        if not run_id:
+            match = run_on(race_date.isoformat(), distance_m)
+            run_id = match["strava_id"] if match else None
+        c = conn()
+        c.execute("INSERT INTO race_log (race_date, name, distance_m, time_s, run_id, event, nyrr, notes, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+                  (race_date.isoformat(), name, distance_m, time_s, str(run_id) if run_id else None, event, 1 if body.get("nyrr") else 0,
+                   str(body.get("notes") or "").strip()[:300] or None, datetime.now(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds") + "Z"))
+        c.commit()
+        return jsonify(races_response()), 201
+
+    @app.delete("/api/races/<int:race_id>")
+    def delete_race(race_id):
+        c = conn()
+        if not c.execute("DELETE FROM race_log WHERE id = ?", (race_id,)).rowcount:
+            return jsonify({"error": "No such race in your log."}), 404
+        c.commit()
+        return jsonify(races_response())
 
     # ------------------------------------------------------------------ race-time calculator
     @app.get("/api/calc")
