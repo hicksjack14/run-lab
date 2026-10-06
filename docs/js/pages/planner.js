@@ -16,22 +16,30 @@ export async function render(view, _params, ctx) {
     root.replaceChildren();
     if (isStatic && !data.plan) root.append(h("div", { class: "empty-state" }, h("p", { class: "eyebrow" }, "Planner"), h("h1", {}, "No plan in this snapshot"),
       h("p", {}, "Plans are built in Run Lab on your computer. Build one there, then update the snapshot and it shows up here.")));
-    else if (!data.plan || forceForm) root.append(goalForm(data, fit, ctx, (d) => show(d), () => show(data)));
-    else root.append(...planView(data, fit, ctx, () => show(data, true), (d) => show(d)));
+    else if (!data.plan || forceForm) root.append(goalForm(data, fit, ctx, (d) => show(d), () => show(data), forceForm === "follow"));
+    else root.append(...planView(data, fit, ctx, () => show(data, true), (d) => show(d), () => show(data, "follow")));
   };
   show(planData);
 }
 
 // =============================================================== form
-function goalForm(current, fit, ctx, onCreated, onCancel) {
-  const st = { goal: "Half marathon", days: 4, longDow: 6 };
+function goalForm(current, fit, ctx, onCreated, onCancel, followUp = false) {
+  const st = followUp ? { goal: "10K", days: 4, longDow: 6, role: "companion" } : { goal: "Half marathon", days: 4, longDow: 6, role: "race" };
   const today = ctx.meta.today;
   const saturdayOffset = (6 - parseLocal(today).getDay() + 7) % 7;   // days until the next Saturday
-  const dateInput = h("input", { class: "input", type: "date", id: "race-date", min: addDays(today, 14), value: addDays(today, 7 * 14 + saturdayOffset), required: true });
+  const chain = (current.plan && current.plan.chain) || [];
+  const lastRace = chain.length ? chain[chain.length - 1] : null;   // a follow-up race must come after this one
+  const dateInput = followUp && lastRace
+    ? h("input", { class: "input", type: "date", id: "race-date", min: addDays(lastRace.race_date, 7), value: addDays(lastRace.race_date, 42), required: true })
+    : h("input", { class: "input", type: "date", id: "race-date", min: addDays(today, 14), value: addDays(today, 7 * 14 + saturdayOffset), required: true });
+  const nameInput = h("input", { class: "input", type: "text", id: "race-name", maxlength: "60", placeholder: "e.g. Thanksgiving 10K with Dad" });
+  const paceInput = h("input", { class: "input mono", type: "text", id: "companion-pace", inputmode: "numeric", autocomplete: "off", value: "14:30" });
   const timeInput = h("input", { class: "input mono", type: "text", id: "goal-time", inputmode: "numeric", autocomplete: "off" });
   const preview = h("p", { class: "hint", "aria-live": "polite" });
   const error = h("p", { class: "error-text", role: "alert" });
-  const submit = h("button", { class: "btn btn-primary btn-lg", type: "submit" }, "Build my plan");
+  const submit = h("button", { class: "btn btn-primary btn-lg", type: "submit" }, followUp ? "Add follow-up" : "Build my plan");
+  const timeField = h("div", { class: "field" }, h("label", { class: "label", for: "goal-time" }, "Goal finish time (optional)"), timeInput);
+  const paceField = h("div", { class: "field" }, h("label", { class: "label", for: "companion-pace" }, "Their pace per mile"), paceInput);
 
   const segment = (items, key, label) => {
     const wrap = h("div", { class: "seg", role: "group", "aria-label": label },
@@ -46,6 +54,13 @@ function goalForm(current, fit, ctx, onCreated, onCancel) {
     const days = Math.round((parseLocal(dateInput.value) - parseLocal(today)) / 86400000);
     const weeks = Math.ceil(days / 7);
     const need = MIN_WEEKS[st.goal];
+    timeField.hidden = st.role === "companion";
+    paceField.hidden = st.role !== "companion";
+    if (followUp && lastRace) {
+      preview.textContent = `Starts the day after your ${lastRace.goal} (${fmtDay(lastRace.race_date, { month: "short", day: "numeric" })}). Week 1 is an easy recovery week.` +
+        (st.role === "companion" ? " The race is an easy run at their pace, so there is no taper or goal time." : "");
+      return;
+    }
     preview.textContent = (isNaN(weeks) ? "" : `${weeks} weeks to race day. ${weeks < need ? `That is short for a ${st.goal}; ${need}+ is recommended, so the build gets compressed.` : "Plenty of time for a proper build."}`)
       + (pred ? ` Your current fitness predicts ${pred}.` : "");
   }
@@ -54,31 +69,37 @@ function goalForm(current, fit, ctx, onCreated, onCancel) {
   const form = h("form", { class: "goal-form", novalidate: true, onsubmit: async (e) => {
     e.preventDefault();
     error.textContent = "";
-    const gt = timeInput.value.trim() ? parseDuration(timeInput.value) : null;
-    if (timeInput.value.trim() && !gt) { error.textContent = "Goal time should look like 1:55:00 or 25:30."; return; }
+    const gt = st.role !== "companion" && timeInput.value.trim() ? parseDuration(timeInput.value) : null;
+    if (st.role !== "companion" && timeInput.value.trim() && !gt) { error.textContent = "Goal time should look like 1:55:00 or 25:30."; return; }
+    const companionPace = st.role === "companion" ? parseDuration(paceInput.value) : null;
+    if (st.role === "companion" && !companionPace) { error.textContent = "Their pace should look like 14:30."; return; }
     submit.disabled = true; submit.textContent = "Building…";
     try {
-      const data = await api.post("/api/plan", { goal: st.goal, race_date: dateInput.value, goal_time_s: gt, days_per_week: st.days, long_run_dow: st.longDow });
-      toast("Plan built.");
+      const body = { goal: st.goal, race_date: dateInput.value, goal_time_s: gt, days_per_week: st.days, long_run_dow: st.longDow };
+      if (followUp) Object.assign(body, { follow_up: true, role: st.role, companion_pace_s: companionPace, name: nameInput.value.trim() || null });
+      const data = await api.post("/api/plan", body);
+      toast(followUp ? "Follow-up added." : "Plan built.");
       onCreated(data);
     } catch (err) {
       error.textContent = err.data && err.data.needs ? `${err.message} ${err.data.needs.join(" ")}` : err.message;
-      submit.disabled = false; submit.textContent = "Build my plan";
+      submit.disabled = false; submit.textContent = followUp ? "Add follow-up" : "Build my plan";
     }
   } },
     h("div", { class: "field" }, h("span", { class: "label" }, "Goal race"), segment(GOALS.map((g) => [g, g]), "goal", "Goal race")),
+    followUp ? h("div", { class: "field" }, h("span", { class: "label" }, "How will you run it?"), segment([["companion", "Easy, beside someone"], ["race", "Race it"]], "role", "How you will run it")) : null,
+    followUp ? h("div", { class: "field" }, h("label", { class: "label", for: "race-name" }, "Name (optional)"), nameInput) : null,
     h("div", { class: "form-row" },
       h("div", { class: "field" }, h("label", { class: "label", for: "race-date" }, "Race date"), dateInput),
-      h("div", { class: "field" }, h("label", { class: "label", for: "goal-time" }, "Goal finish time (optional)"), timeInput)),
+      followUp ? [timeField, paceField] : timeField),
     h("div", { class: "form-row" },
       h("div", { class: "field" }, h("span", { class: "label" }, "Runs per week"), segment([3, 4, 5, 6].map((d) => [d, String(d)]), "days", "Runs per week")),
       h("div", { class: "field" }, h("span", { class: "label" }, "Long run day"), segment([[5, "Saturday"], [6, "Sunday"]], "longDow", "Long run day"))),
     preview, error,
-    h("div", { class: "form-actions" }, submit, current.plan ? h("button", { class: "btn btn-quiet", type: "button", onclick: onCancel }, "Keep current plan") : null));
+    h("div", { class: "form-actions" }, submit, current.plan ? h("button", { class: "btn btn-quiet", type: "button", onclick: onCancel }, followUp ? "Cancel" : "Keep current plan") : null));
   refresh();
 
   return h("div", {},
-    h("header", { class: "page-head" }, h("div", {}, h("p", { class: "eyebrow" }, current.plan ? "Replace your plan" : "Set a goal"), h("h1", {}, current.plan ? "New plan" : "What are you training for?"))),
+    h("header", { class: "page-head" }, h("div", {}, h("p", { class: "eyebrow" }, followUp ? "Add a follow-up race" : current.plan ? "Replace your plan" : "Set a goal"), h("h1", {}, followUp && lastRace ? `What comes after the ${lastRace.goal}?` : current.plan ? "New plan" : "What are you training for?"))),
     h("div", { class: "planner-form-grid" }, form, numbersPanel(fit)));
 }
 
@@ -151,21 +172,31 @@ function numbersPanel(fit) {
 }
 
 // =============================================================== plan view
-function planView(data, fit, ctx, onNewPlan, onChange) {
+function planView(data, fit, ctx, onNewPlan, onChange, onFollowUp) {
   const { plan, workouts, stats, next } = data;
   const daysToRace = Math.round((parseLocal(plan.race_date) - parseLocal(ctx.meta.today)) / 86400000);   // from today's date, so it stays right between snapshots
   const detail = h("section", { class: "workout-detail", "aria-live": "polite" }, h("p", { class: "muted" }, "Select a workout to see its pace, heart-rate target, and details."));
   let selectedBtn = null;
 
   const goalPace = plan.goal_time_s / (plan.race_distance_m / 1609.344);
+  const later = (plan.chain || []).filter((c) => c.race_date > plan.race_date);   // follow-up races still to come
   const head = h("header", { class: "plan-head" },
     h("div", {}, h("p", { class: "eyebrow" }, "Current goal"), h("h1", {}, `${plan.goal}, ${fmtDay(plan.race_date, { month: "long", day: "numeric", year: "numeric" })}`),
-      h("p", { class: "muted mono" }, `Goal ${dur(plan.goal_time_s)} · ${pace(goalPace)}/mi · fitness predicts ${dur(plan.projected_time_s)}`)),
+      h("p", { class: "muted mono" }, plan.role === "companion"
+        ? `Easy run at ${pace(goalPace)}/mi · about ${dur(plan.goal_time_s)}`
+        : `Goal ${dur(plan.goal_time_s)} · ${pace(goalPace)}/mi · fitness predicts ${dur(plan.projected_time_s)}`),
+      later.length ? h("p", { class: "muted" }, `Then: ${later.map((c) => `${c.goal}, ${fmtDay(c.race_date, { month: "short", day: "numeric" })}`).join(" · ")}`) : null),
     h("div", { class: "countdown" }, h("span", { class: "big mono" }, Math.max(0, daysToRace)), h("span", { class: "label" }, daysToRace === 1 ? "day to go" : "days to go")));
 
   const calPanel = calendarPanel();
   const actions = h("div", { class: "plan-actions" },
     h("button", { class: "btn btn-primary", type: "button", onclick: () => { calPanel.open = true; calPanel.scrollIntoView({ behavior: "smooth", block: "nearest" }); } }, "Add to Google Calendar"),
+    isStatic ? null : h("button", { class: "btn btn-quiet", type: "button", onclick: onFollowUp }, "Add a follow-up race"),
+    isStatic || !plan.chain || plan.chain.length < 2 ? null : h("button", { class: "btn btn-quiet", type: "button", onclick: async () => {
+      const last = plan.chain[plan.chain.length - 1];
+      if (!confirm(`Remove the follow-up (${last.goal})? Your first plan stays.`)) return;
+      onChange(await api.del("/api/plan?last=1"));
+    } }, "Remove follow-up"),
     isStatic ? null : h("button", { class: "btn btn-quiet", type: "button", onclick: onNewPlan }, "New plan"),
     isStatic ? null : h("button", { class: "btn btn-quiet", type: "button", onclick: async () => {
       if (!confirm("Remove this plan? Your runs stay untouched.")) return;

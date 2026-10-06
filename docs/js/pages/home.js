@@ -62,6 +62,8 @@ function goalBlock(planData, ctx) {
   return h("section", { class: "side-block", "aria-label": "Goal" }, h("h2", { class: "label" }, "Goal"),
     h("p", { class: "side-title" }, `${plan.goal} · ${fmtDay(plan.race_date, { month: "short", day: "numeric", year: "numeric" })}`),
     h("p", { class: "big mono" }, days_to_race > 0 ? days_to_race : 0, h("small", {}, days_to_race === 1 ? "day to go" : "days to go")),
+    ...(plan.chain || []).filter((c) => c.race_date > plan.race_date).map((c) =>
+      h("p", { class: "muted" }, `Then: ${c.goal} · ${fmtDay(c.race_date, { month: "short", day: "numeric" })}`)),
     h("div", { class: "plan-progress", role: "img", "aria-label": `${stats.done} of ${stats.total} workouts done` },
       h("div", { class: "pp-done", style: { width: `${(stats.done / stats.total) * 100}%` } }),
       h("div", { class: "pp-partial", style: { width: `${(stats.partial / stats.total) * 100}%` } }),
