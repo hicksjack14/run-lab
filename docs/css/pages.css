@@ -384,3 +384,12 @@
 .ci-day { display: grid; gap: 4px; justify-items: center; flex: 1; } .ci-n { font-size: 0.8rem; color: var(--muted); }
 .ci-col { width: 100%; height: 56px; display: flex; align-items: flex-end; background: var(--sunken); border-radius: 6px; overflow: hidden; } .ci-col > div { width: 100%; background: var(--pace); }
 @media (max-width: 900px) { .st-wrap { grid-template-columns: 1fr; } .st-main { flex-direction: column; align-items: flex-start; } }
+
+/* ---------- phones: roomier run rows ---------- */
+@media (max-width: 560px) {
+  .run-row-card { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 2px 14px; padding: 12px 10px; }
+  .run-row-card > :first-child, .run-row-card .rr-name { grid-row: 1 / span 2; }
+  .run-row-card .rr-stat { text-align: right; min-width: 0; }
+  .rr-name .muted { white-space: normal; }
+}
+@media (max-width: 560px) { .run-row-card .glyph, .run-row-card .glyph-empty { width: 56px; height: 40px; } }

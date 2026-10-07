@@ -36,7 +36,6 @@ async function navigate() {
   const route = ROUTES.find((r) => r.re.test(hash)) || ROUTES[0];
   const params = (hash.match(route.re) || []).slice(1).map((p) => (p == null ? p : decodeURIComponent(p)));
   $$(".nav a").forEach((a) => (a.dataset.route === route.nav ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current")));
-  $(".nav a[aria-current]")?.scrollIntoView({ block: "nearest", inline: "nearest" });      // keep the open tab visible when the tab row scrolls (phones)
   document.title = `${route.title} · Run Lab`;
   window.scrollTo(0, 0);
   try {
