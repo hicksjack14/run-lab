@@ -93,11 +93,6 @@ async function boot() {
     // the snapshot was frozen when exported, but "today" should be today so countdowns and the plan grid stay right
     const d = new Date();
     ctx.meta.today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const when = new Date(ctx.meta.exported_at);
-    const chip = $("#snap-chip");
-    chip.hidden = false;
-    chip.textContent = `Snapshot · ${when.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
-    chip.title = `Read-only copy, last updated ${when.toLocaleString()}`;
   }
   $("#demo-chip").hidden = !ctx.meta.demo;
   setupSync();
