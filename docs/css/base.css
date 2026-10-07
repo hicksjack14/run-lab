@@ -136,7 +136,10 @@ h2 { font-size: 1.125rem; line-height: 1.25; font-weight: 600; }
 
 @media (max-width: 720px) {
   .topbar { gap: 12px; }
-  .nav a { padding: 8px 10px; }
+  .nav { flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }      /* seven tabs don't fit a phone: the tab row scrolls sideways */
+  .nav::-webkit-scrollbar { display: none; }
+  .nav a { padding: 8px 10px; white-space: nowrap; flex: none; }
+  .topbar-end { flex: none; }
   .brand-text { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
