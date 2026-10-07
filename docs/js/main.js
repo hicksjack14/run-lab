@@ -8,6 +8,7 @@ import * as planner from "./pages/planner.js";
 import * as races from "./pages/races.js";
 import * as calculator from "./pages/calculator.js";
 import * as stretches from "./pages/stretches.js";
+import * as workouts from "./pages/workouts.js";
 import * as analytics from "./pages/analytics.js";
 
 const ROUTES = [
@@ -18,6 +19,7 @@ const ROUTES = [
   { re: /^#\/races$/, page: races, nav: "races", title: "Races" },
   { re: /^#\/calc$/, page: calculator, nav: "calc", title: "Calculator" },
   { re: /^#\/stretches$/, page: stretches, nav: "stretches", title: "Stretches" },
+  { re: /^#\/workouts$/, page: workouts, nav: "workouts", title: "Workouts" },
   { re: /^#\/analytics(?:\/(story|explore|places))?$/, page: analytics, nav: "analytics", title: "Analytics" },
 ];
 
