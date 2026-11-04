@@ -92,6 +92,11 @@ function heroScene(data, cleanups) {
           stat("Pace", `${pace(sm.first_pace)} → ${pace(sm.recent_pace)} /mi`), stat("Longest", `${sm.longest_mi} mi`)),
         replay)));
   const view = constellation(canvas, routes);
+  const regionRow = view.groups.length > 1 ? h("div", { class: "hero-regions", role: "group", "aria-label": "Choose a place to draw" },
+    view.groups.map((g, i) => h("button", { type: "button", class: "chip-btn", "aria-pressed": i === 0 ? "true" : "false",
+      onclick: (e) => { regionRow.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === e.currentTarget))); view.setRegion(i); numEl.textContent = String(sm.miles); } },
+      `${i === 0 ? "Most-run area" : `Place ${i + 1}`} · ${g.routes.length} runs`))) : null;
+  if (regionRow) el.querySelector(".scene-copy").append(regionRow);
   const play = () => { countUp(numEl, sm.miles, { decimals: 1, duration: 2200 }); view.play(); };
   replay.addEventListener("click", play);
   requestAnimationFrame(() => requestAnimationFrame(play));
@@ -101,8 +106,22 @@ function heroScene(data, cleanups) {
   return { el, name: "Season", played: true };
 }
 
-function constellation(canvas, routes) {
+// Group routes by where they start (within ~25 km), biggest group first. Without this, a season that spans
+// Syracuse + Nashville + NYC makes one giant bounding box and every route shrinks to a dot.
+function regionGroups(routes) {
+  const groups = [];
+  for (const r of routes) {
+    const [la, lo] = r.pts[0] || [0, 0];
+    const g = groups.find((x) => Math.hypot(x.la - la, (x.lo - lo) * Math.cos(la * Math.PI / 180)) < 0.25);
+    if (g) g.routes.push(r); else groups.push({ la, lo, routes: [r] });
+  }
+  return groups.sort((a, b) => b.routes.length - a.routes.length);
+}
+
+function constellation(canvas, allRoutes, onRegion) {
   const ctx = canvas.getContext("2d");
+  const groups = regionGroups(allRoutes.filter((r) => r.pts && r.pts.length > 1));
+  let routes = groups.length ? groups[0].routes : [];
   let segs = [], drawn = 0, raf = 0, W = 0, H = 0, duration = 4500, t0 = 0, playing = false;
 
   function layout() {
@@ -115,7 +134,10 @@ function constellation(canvas, routes) {
     if (all.length < 2) return;
     const lats = all.map((p) => p[0]), lngs = all.map((p) => p[1]);
     const cos = Math.cos((lats.reduce((a, b) => a + b, 0) / lats.length) * Math.PI / 180);
-    const minX = Math.min(...lngs), maxX = Math.max(...lngs), minY = Math.min(...lats), maxY = Math.max(...lats);
+    // fit the frame to where most of the running happens (middle 70% of points, padded) so a few far-off runs bleed off the edge instead of shrinking everything
+    const q = (a, f) => { const b = [...a].sort((x, y) => x - y); return b[Math.min(b.length - 1, Math.max(0, Math.round(f * (b.length - 1))))]; };
+    const padTo = (lo, hi) => { const d = Math.max(hi - lo, 0.004) * 0.7; return [lo - d, hi + d]; };
+    const [minX, maxX] = padTo(q(lngs, 0.15), q(lngs, 0.85)), [minY, maxY] = padTo(q(lats, 0.15), q(lats, 0.85));
     const spanX = (maxX - minX) * cos || 1e-6, spanY = maxY - minY || 1e-6;
     // the route art lives on the right ~62% of the screen; the headline sits on the left
     const boxX = W * 0.36, boxW = W * 0.6, boxY = H * 0.08, boxH = H * 0.84;
@@ -134,6 +156,7 @@ function constellation(canvas, routes) {
   function paint(from, to) {
     ctx.globalCompositeOperation = "lighter";
     ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.save(); ctx.beginPath(); ctx.rect(W * 0.3, 0, W * 0.7, H); ctx.clip();
     for (let i = from; i < to; i++) {
       const [x1, y1, x2, y2, color, latest] = segs[i];
       ctx.strokeStyle = color;
@@ -142,6 +165,7 @@ function constellation(canvas, routes) {
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     }
     ctx.globalAlpha = 1;
+    ctx.restore();
   }
   function clear() { ctx.globalCompositeOperation = "source-over"; ctx.clearRect(0, 0, W, H); drawn = 0; }
   function frame(now) {
@@ -153,6 +177,8 @@ function constellation(canvas, routes) {
   }
   layout();
   return {
+    groups,
+    setRegion(i) { routes = groups[i].routes; this.play(); },
     play() {
       cancelAnimationFrame(raf); layout(); clear();
       if (reducedMotion()) { paint(0, segs.length); drawn = segs.length; return; }
