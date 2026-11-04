@@ -1,6 +1,9 @@
 import { h, reducedMotion } from "../lib/dom.js";
-import { CIRCUIT, circuitRepsPerRound } from "../lib/workouts-data.js";
+import { CIRCUIT, circuitRepsPerRound, ROUTINES } from "../lib/workouts-data.js";
+import { guidedPlayer } from "./workouts-guided.js";
 import { store, mmss, todayKey, makeTools } from "../lib/routine-tools.js";
+
+const KEY_PICK = "runlab.workouts.pick.v1";
 
 const KEY_CIRCUIT = "runlab.circuit.v1";
 
@@ -54,10 +57,25 @@ function circuitPlayer(tools) {
       h("h2", { class: "label", style: { marginTop: "22px" } }, "Last 7 days (saved on this device)"), hist));
 }
 
-// ------------------------------------------------------------------ page
+// ------------------------------------------------------------------ page: pick a routine, then run it
 export async function render(view) {
   const tools = makeTools();
+  const choices = [...ROUTINES.map((r) => ({ id: r.id, label: r.name, sub: `${r.minutes} min` })), { id: "circuit", label: "Open clock", sub: "20 min, any order" }];
+  let pick = store.get(KEY_PICK, ROUTINES[0].id);
+  if (!choices.some((c) => c.id === pick)) pick = choices[0].id;
+  const stage = h("div", {});
+  let current = null;
+  const picker = h("div", { class: "wk-picker", role: "group", "aria-label": "Choose a routine" });
+  function show(id) {
+    if (current) current.stop();
+    tools.stop(); tools.letSleep(); pick = id; store.set(KEY_PICK, id);
+    picker.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.id === id)));
+    if (id === "circuit") { current = { stop() {} }; stage.replaceChildren(circuitPlayer(tools)); return; }
+    current = guidedPlayer(ROUTINES.find((r) => r.id === id), tools); stage.replaceChildren(current.node);
+  }
+  picker.append(...choices.map((c) => h("button", { type: "button", class: "chip-btn", "data-id": c.id, "aria-pressed": "false", onclick: () => show(c.id) }, `${c.label} · ${c.sub}`)));
   view.replaceChildren(h("div", { class: `page stretches${reducedMotion() ? " calm" : ""}` },
-    h("header", { class: "page-head" }, h("div", {}, h("p", { class: "eyebrow" }, "Daily"), h("h1", {}, "Workouts"))), circuitPlayer(tools)));
-  return () => { tools.stop(); tools.letSleep(); };
+    h("header", { class: "page-head" }, h("div", {}, h("p", { class: "eyebrow" }, "Daily"), h("h1", {}, "Workouts"))), picker, stage));
+  show(pick);
+  return () => { if (current) current.stop(); tools.stop(); tools.letSleep(); };
 }

@@ -393,3 +393,7 @@
   .rr-name .muted { white-space: normal; }
 }
 @media (max-width: 560px) { .run-row-card .glyph, .run-row-card .glyph-empty { width: 56px; height: 40px; } }
+
+.wk-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; }
+.wk-picker .chip-btn[aria-pressed="true"] { border-color: var(--pace, oklch(0.8 0.1 225)); color: var(--text); background: var(--raised); }
+.st-row[aria-current="step"] { background: var(--raised); }

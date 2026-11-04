@@ -7,6 +7,8 @@ import * as run from "./pages/run.js";
 import * as planner from "./pages/planner.js";
 import * as races from "./pages/races.js";
 import * as calculator from "./pages/calculator.js";
+import * as stretches from "./pages/stretches.js";
+import * as workouts from "./pages/workouts.js";
 import * as analytics from "./pages/analytics.js";
 
 const ROUTES = [
@@ -16,6 +18,8 @@ const ROUTES = [
   { re: /^#\/plan$/, page: planner, nav: "plan", title: "Planner" },
   { re: /^#\/races$/, page: races, nav: "races", title: "Races" },
   { re: /^#\/calc$/, page: calculator, nav: "calc", title: "Calculator" },
+  { re: /^#\/stretches$/, page: stretches, nav: "stretches", title: "Stretches" },
+  { re: /^#\/workouts$/, page: workouts, nav: "workouts", title: "Workouts" },
   { re: /^#\/analytics(?:\/(story|explore|places))?$/, page: analytics, nav: "analytics", title: "Analytics" },
 ];
 
@@ -88,11 +92,6 @@ async function boot() {
     // the snapshot was frozen when exported, but "today" should be today so countdowns and the plan grid stay right
     const d = new Date();
     ctx.meta.today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const when = new Date(ctx.meta.exported_at);
-    const chip = $("#snap-chip");
-    chip.hidden = false;
-    chip.textContent = `Snapshot · ${when.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
-    chip.title = `Read-only copy, last updated ${when.toLocaleString()}`;
   }
   $("#demo-chip").hidden = !ctx.meta.demo;
   setupSync();

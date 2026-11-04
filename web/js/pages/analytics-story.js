@@ -158,6 +158,7 @@ function constellation(canvas, allRoutes, onRegion) {
     ctx.lineCap = "round"; ctx.lineJoin = "round";
     ctx.save(); ctx.beginPath(); ctx.rect(W * 0.3, 0, W * 0.7, H); ctx.clip();
     for (let i = from; i < to; i++) {
+      if (!segs[i]) break;
       const [x1, y1, x2, y2, color, latest] = segs[i];
       ctx.strokeStyle = color;
       ctx.globalAlpha = latest ? 0.95 : 0.26;

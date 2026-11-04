@@ -89,7 +89,7 @@ class StravaClient:
     def auth_url(self):
         q = urllib.parse.urlencode({
             "client_id": self.cfg["client_id"], "redirect_uri": REDIRECT_URI, "response_type": "code",
-            "approval_prompt": "auto", "scope": "read,activity:read_all",
+            "approval_prompt": "auto", "scope": "read,activity:read_all,activity:write",
         })
         return f"{OAUTH}/authorize?{q}"
 
@@ -127,6 +127,16 @@ class StravaClient:
             sys.exit("Strava says the token is not valid. Run: python -m ingest.strava_api auth")
         if status != 200:
             raise StravaError(path, status, body)
+        return body
+
+    def put(self, path, **fields):
+        """Change something on Strava (needs the activity:write permission, granted when you run `auth`)."""
+        status, headers, body = self.http("PUT", f"{API}{path}", {"Authorization": f"Bearer {self.access_token()}", "Content-Type": "application/x-www-form-urlencoded"},
+                                          urllib.parse.urlencode(fields))
+        if status == 429:
+            raise RateLimited()
+        if status != 200:
+            raise StravaError(path, status, body)          # a 401 here almost always means the write permission was never granted
         return body
 
     def list_runs(self):

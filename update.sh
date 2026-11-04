@@ -10,6 +10,9 @@ mkdir -p data
   if [ -f data/spotify_token.json ]; then
     .venv/bin/python -m ingest.spotify_live poll || echo "Spotify poll had a problem; continuing."
   fi
+  if [ -f data/spotify_token.json ]; then
+    .venv/bin/python -m ingest.strava_post run || echo "Posting songs to Strava had a problem; continuing."
+  fi
   if find data/spotify-export -name '*.json' 2>/dev/null | grep -q .; then
     .venv/bin/python -m ingest.spotify_import || echo "Spotify import had a problem; continuing."
   fi

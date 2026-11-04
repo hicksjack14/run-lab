@@ -34,6 +34,12 @@ Restart the server after editing Python modules (no auto-reload of imports).
 ## Shoes
 Strava sync refreshes each shoe's lifetime distance (`settings.gear_info`, 1 request per shoe per sync); `analysis/shoes.py` turns that + tagged runs + per-shoe `start_mi`/`limit_mi` (default 400) into the Home "Shoe mileage" block. Runs with no shoe set in Strava aren't counted (only runs since 2026-09-08 are tagged). Home order: recent runs, up next, full plan grid (`web/js/lib/plangrid.js`, shared with the Planner).
 
+## Stretches and Workouts tabs (`#/stretches`, `#/workouts`)
+Pure front end, no API. **Stretches:** `web/js/lib/stretches-data.js` (`ROUTINE`: 13 moves = exactly 900 s, each `sides: [["Right", s], ["Left", s]]` with the tighter right side first and held longer, or `secs`; `EXTRAS`; `SAFETY`) + `web/js/pages/stretches.js` (timed player: auto-advance, pause/skip/back, chime, screen wake lock). **Workouts:** `web/js/lib/workouts-data.js` (`CIRCUIT`: 10 pull-ups, 20 push-ups, 25 crunches, 50 squats, 20 min) + `web/js/pages/workouts.js` (countdown + "Round done" counter, saved in localStorage `runlab.circuit.v1`, per device, last 7 days). **Guided routines (2026-11-04):** `ROUTINES` in `workouts-data.js` (Fedoseev 3x from a Yapper reel, Athletic circuit, EMOM 18, Runner legs + bar; step kinds `reps` / `timed` / `rest`, each move has form cues + an easier option) played by `web/js/pages/workouts-guided.js`; the page opens with a routine picker, the old 20-min clock is the "Open clock" option. Finished routines are logged per device in localStorage `runlab.routines.v1`. Add a routine by adding an entry (use the `reps()/timed()/rest()` helpers). Shared helpers (storage, chime, wake lock, ticker) are in `web/js/lib/routine-tools.js`. Page wording stays general on purpose (no diagnoses): the snapshot is public. Keep the routine summing to 15:00 (`routineSeconds()`). The tab row scrolls sideways on phones (8 tabs).
+
+## Songs on Strava
+`ingest/strava_post.py` adds the run's songs (numbered, in play order) to the Strava description, under any text Jack wrote; `update.sh` runs it hourly. OFF until Jack runs `python -m ingest.strava_post enable` (then only runs from that day on). Needs the Strava **write** permission: `strava_api auth` now asks for `activity:write`, so Jack must re-run `auth` once. A run is posted 45 min after it ends, never twice (checks for the header), skipped if older than 3 days or no songs saved. `preview <run_id>` shows the text without posting. Claude never runs `enable` or `auth`.
+
 ## Calculator defaults
 The calculator page opens on Jack's own numbers from `settings.calc_defaults` ({pace_s, stop_every_mi, stop_min}; currently 9:47, a stop every 3.1 mi, 1.25 min each, from his 2026-10-04 10-miler). No UI to edit them yet: set with `fitness.set_setting(conn, "calc_defaults", {...})`. Missing keys fall back to his usual-effort pace, 3 mi, 1 min.
 
@@ -68,20 +74,26 @@ After writing a dump, ALWAYS check every stream array has the same length (a mis
 - Never commit anything under `data/`. This data has GPS + listening history; any public version excludes maps and exact times.
 - Before ANY UI work, invoke `frontend-design`, `ui-ux-pro-max`, and `impeccable` (Jack's global rule). Verify UI in the browser preview before calling it done.
 - Pace/zone/matching logic gets unit tests with hand-checked numbers. Prove it works before saying done.
-- Tests: `.venv/bin/python -m pytest -q` (~135, ~1s). Some insights/music tests assert patterns planted by `tools/make_demo_data.py` and skip if `data/demo.db` is missing: regenerate with `python -m tools.make_demo_data` after changing the generator.
+- Tests: `.venv/bin/python -m pytest -q` (~211, ~1s). Some insights/music tests assert patterns planted by `tools/make_demo_data.py` and skip if `data/demo.db` is missing: regenerate with `python -m tools.make_demo_data` after changing the generator.
 - No `innerHTML` in `web/` (a security hook blocks it, and run names come from Strava): build DOM with `h()`/`s()` from `web/js/lib/dom.js`.
 - After any `web/` or API change, run `python -m tools.export_static` so `docs/` matches before committing (`update.sh` does this daily). Restart the preview server after Python edits.
 - Preview configs (all port 5057, stop one before starting another): "Run Lab", "Run Lab (demo data)", "Run Lab (static snapshot)" in `Claude-Brain/.claude/launch.json`. Use the demo data to build/verify UI that needs many runs, then smoke-test the real DB (it surfaces things demo data hides).
 - Statistics: findings must state sample size + confidence and compare like with like (control effort/distance/drift); never oversell small-n patterns.
 - Jack is a beginner coder: brief plain-English explanation after bug fixes; explain before big or hard-to-reverse changes.
 
+- UI checks that WRITE (forms): use the demo DB and back up `data/demo.db` first, restore after. Real-data checks must be GET-only.
+- Modules added 2026-10-05: `analysis/albums.py` (finished albums), `analysis/goal_races.py` (NYC/Boston requirements, `VERIFIED` date), `ingest/crates_sync.py`.
+
 ## Publishing the read-only snapshot (GitHub Pages)
 `python -m tools.export_static` runs the app's own API over a temp copy of the DB and writes a plain-file site to `docs/` (data in `docs/data/*.json`). The front end detects `<meta name="runlab-static">` (`web/js/lib/api.js`): GETs read files, writes are refused, Sync/plan editing are hidden, a "Snapshot" chip shows the export date, and "today"/countdowns use the browser's clock. GPS is trimmed 400 m at both ends of every route by default (`--no-trim` to disable); the real DB is never modified.
 - `./update.sh`: sync Strava, import Spotify if an export is present, export, commit `docs/`, push. Logs to `data/update.log`. Claude does not run the push.
-- `./install_daily_update.sh` (`--remove` to undo): launchd job running update.sh every hour (+ at load); it only commits when `docs/` changed. Only Jack installs it. GitHub Pages caches data files 10 min (hard-refresh to see a new run).
+- `./install_daily_update.sh` (`--remove` to undo): launchd job running update.sh every hour (launched via `.venv/bin/python -c subprocess bash update.sh`. launchd exits 78 and never runs if it can't open `data/update.log`, which happened when the log had been created by a Terminal `tee`: delete `data/update.log` and re-run the installer; check `launchctl print gui/$(id -u)/com.runlab.update | grep 'last exit'`) (+ at load); it only commits when `docs/` changed. Only Jack installs it. GitHub Pages caches data files 10 min (hard-refresh to see a new run).
 - Pages setup (Jack, once): repo must be public (free) or Pro; Settings > Pages > Deploy from branch `master`, folder `/docs`. Site: https://hicksjack14.github.io/run-lab/
 - The snapshot is public: it contains run stats, trimmed routes, and listening-derived findings. Never commit `data/`.
 - Preview locally: `python -m tools.export_static --demo --out .static-preview` then launch config "Run Lab (static snapshot)".
+
+## Phone layout
+At <=720px the shell becomes a phone app like the Dad edition: slim top bar (brand + Sync/Demo chip) and the nav (`.nav`, inside the header in `index.html`, `position: fixed`) becomes an icon-only bottom tab bar with a raised pill + pace-blue icon on the open tab. Each tab link has an inline SVG (`.nav-icon`), a visible word (`.nav-label`, hidden on phones) and an `aria-label`. `viewport-fit=cover` + `env(safe-area-inset-bottom)` keep it clear of the iPhone home bar; the toast rides above it. Desktop keeps word tabs. `#snap-chip` is a never-shown placeholder so older cached `main.js` copies don't crash (GitHub Pages caches files ~10 min). Adding a ninth tab means updating `grid-template-columns: repeat(8, ...)` in `base.css`.
 
 ## Theme
 Deep navy + light blue (see `DESIGN.md`). Light blue = pace, coral = heart rate. Neutrals are navy-tinted oklch at hue ~258. Changing the palette means `web/css/base.css` tokens, the JS color ramps (`PACE_RAMP`/`TIME_RAMP`/`EFF_RAMP`), `web/js/lib/backdrop.js`, and `tools/make_icon.py` (then `python3 tools/make_icon.py`).

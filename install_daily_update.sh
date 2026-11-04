@@ -3,6 +3,8 @@
 #   ./install_daily_update.sh            turn it on (every hour; a new run is on the site within about an hour of the Mac being awake)
 #   ./install_daily_update.sh --remove   turn it off
 # Output goes to data/update.log. It needs: Strava set up (.env + auth), and `git push` working without a password prompt.
+# launchd exits 78 (EX_CONFIG) without running anything if it cannot open the log file. A log made by another program (e.g. `tee` in Terminal) can trigger that:
+# if `launchctl print gui/$(id -u)/com.runlab.update | grep 'last exit'` shows 78, delete data/update.log and run the installer again. Python launches bash, as the Spotify job does.
 set -e
 cd "$(dirname "$0")"
 REPO="$(pwd)"
@@ -19,7 +21,8 @@ cat > "$PLIST" <<EOF
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
   <key>Label</key><string>com.runlab.update</string>
-  <key>ProgramArguments</key><array><string>/bin/bash</string><string>$REPO/update.sh</string></array>
+  <key>ProgramArguments</key><array><string>$REPO/.venv/bin/python</string><string>-c</string><string>import subprocess, sys; sys.exit(subprocess.call(["/bin/bash", "$REPO/update.sh"]))</string></array>
+  <key>WorkingDirectory</key><string>$REPO</string>
   <key>StartInterval</key><integer>3600</integer>
   <key>RunAtLoad</key><true/>
   <key>StandardErrorPath</key><string>$REPO/data/update.log</string>

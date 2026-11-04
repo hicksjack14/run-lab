@@ -1,0 +1,150 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Run Lab//10K//EN
+CALSCALE:GREGORIAN
+BEGIN:VEVENT
+UID:runlab-10k-2026-10-27@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261027T173000
+DTEND;TZID=America/New_York:20261027T181100
+SUMMARY:Run: Easy + strides
+DESCRIPTION:Easy running, then 6 x 20 s relaxed strides with full recovery. Builds speed without stress.\nPace 9:37-10:49/mi, HR zone 2-2. Week 2 (base).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-10-29@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261029T173000
+DTEND;TZID=America/New_York:20261029T180600
+SUMMARY:Run: Easy 3.5 mi
+DESCRIPTION:Conversational pace. If you can't chat, slow down.\nPace 9:37-10:49/mi, HR zone 2-2. Week 2 (base).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-10-31@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261031T173000
+DTEND;TZID=America/New_York:20261031T180600
+SUMMARY:Run: Easy 3.5 mi
+DESCRIPTION:Conversational pace. If you can't chat, slow down.\nPace 9:37-10:49/mi, HR zone 2-2. Week 2 (base).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-01@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261101T173000
+DTEND;TZID=America/New_York:20261101T182600
+SUMMARY:Run: Long run 5.5 mi
+DESCRIPTION:Steady and easy, conversational the whole way.\nPace 9:37-10:49/mi, HR zone 2-2. Week 2 (base).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-03@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261103T173000
+DTEND;TZID=America/New_York:20261103T180300
+SUMMARY:Run: Tempo 4.0 mi
+DESCRIPTION:1 mi easy warm-up, 2 mi at tempo pace (8:07-8:17/mi), 1 mi easy cool-down. Comfortably hard: short sentences only.\nPace 8:07-8:17/mi, HR zone 3-4. Week 3 (build).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-05@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261105T173000
+DTEND;TZID=America/New_York:20261105T181100
+SUMMARY:Run: Easy 4.0 mi
+DESCRIPTION:Conversational pace. If you can't chat, slow down.\nPace 9:37-10:49/mi, HR zone 2-2. Week 3 (build).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-07@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261107T173000
+DTEND;TZID=America/New_York:20261107T181100
+SUMMARY:Run: Easy 4.0 mi
+DESCRIPTION:Conversational pace. If you can't chat, slow down.\nPace 9:37-10:49/mi, HR zone 2-2. Week 3 (build).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-08@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261108T173000
+DTEND;TZID=America/New_York:20261108T183100
+SUMMARY:Run: Long run 6.0 mi
+DESCRIPTION:Steady and easy, conversational the whole way.\nPace 9:37-10:49/mi, HR zone 2-2. Week 3 (build).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-10@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261110T173000
+DTEND;TZID=America/New_York:20261110T180100
+SUMMARY:Run: Easy 3.0 mi
+DESCRIPTION:Conversational pace. If you can't chat, slow down.\nPace 9:37-10:49/mi, HR zone 2-2. Week 4 (build).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-12@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261112T173000
+DTEND;TZID=America/New_York:20261112T180100
+SUMMARY:Run: Easy 3.0 mi
+DESCRIPTION:Conversational pace. If you can't chat, slow down.\nPace 9:37-10:49/mi, HR zone 2-2. Week 4 (build).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-14@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261114T173000
+DTEND;TZID=America/New_York:20261114T180100
+SUMMARY:Run: Easy 3.0 mi
+DESCRIPTION:Conversational pace. If you can't chat, slow down.\nPace 9:37-10:49/mi, HR zone 2-2. Week 4 (build).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-15@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261115T173000
+DTEND;TZID=America/New_York:20261115T182100
+SUMMARY:Run: Long run 5.0 mi
+DESCRIPTION:Steady and easy, conversational the whole way.\nPace 9:37-10:49/mi, HR zone 2-2. Week 4 (build).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-17@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261117T173000
+DTEND;TZID=America/New_York:20261117T180700
+SUMMARY:Run: Tempo 4.5 mi
+DESCRIPTION:1 mi easy warm-up, 2.5 mi at tempo pace (8:07-8:17/mi), 1 mi easy cool-down. Comfortably hard: short sentences only.\nPace 8:07-8:17/mi, HR zone 3-4. Week 5 (peak).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-19@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261119T173000
+DTEND;TZID=America/New_York:20261119T181100
+SUMMARY:Run: Easy 4.0 mi
+DESCRIPTION:Conversational pace. If you can't chat, slow down.\nPace 9:37-10:49/mi, HR zone 2-2. Week 5 (peak).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-21@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261121T173000
+DTEND;TZID=America/New_York:20261121T181100
+SUMMARY:Run: Easy 4.0 mi
+DESCRIPTION:Conversational pace. If you can't chat, slow down.\nPace 9:37-10:49/mi, HR zone 2-2. Week 5 (peak).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-22@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261122T173000
+DTEND;TZID=America/New_York:20261122T183600
+SUMMARY:Run: Long run 6.5 mi
+DESCRIPTION:Steady and easy, conversational the whole way.\nPace 9:37-10:49/mi, HR zone 2-2. Week 5 (peak).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-24@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261124T173000
+DTEND;TZID=America/New_York:20261124T175600
+SUMMARY:Run: Easy + strides
+DESCRIPTION:Easy running with 4 x 20 s strides to stay sharp.\nPace 9:37-10:49/mi, HR zone 2-2. Week 6 (taper).
+END:VEVENT
+BEGIN:VEVENT
+UID:runlab-10k-2026-11-26@runlab
+DTSTAMP:20261026T120000Z
+DTSTART;TZID=America/New_York:20261126T070000
+DTEND;TZID=America/New_York:20261126T083000
+SUMMARY:Run: RACE DAY: Thanksgiving 10K with Dad
+DESCRIPTION:Easy run at 14:30/mi, side by side. Talk the whole way and enjoy it: this one is about the company. Finish around 1:30:06.\nPace 14:30-14:30/mi, HR zone 2-2. Week 6 (taper).
+LOCATION:Meridian Cool Springs\, Franklin TN
+END:VEVENT
+END:VCALENDAR
